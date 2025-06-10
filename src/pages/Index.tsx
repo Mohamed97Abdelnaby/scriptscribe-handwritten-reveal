@@ -55,7 +55,7 @@ const Index = () => {
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose DocuScan AI?</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose Raya Intelligent Document?</h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Our state-of-the-art OCR technology delivers unmatched performance for all your document processing needs.
           </p>
