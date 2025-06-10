@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ZoomIn, ZoomOut, RotateCw, Maximize } from "lucide-react";
+import { ZoomIn, ZoomOut, RefreshCcw, Fullscreen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,9 @@ const DocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: Docum
   const [zoom, setZoom] = useState(100);
   const [selectedBox, setSelectedBox] = useState<string | null>(null);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Mock bounding boxes for demonstration
   const mockBoundingBoxes: BoundingBox[] = [
@@ -38,6 +41,37 @@ const DocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: Docum
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
+  
+  const handleRotate = () => {
+    setRotation(prev => (prev + 90) % 360);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // Simulate refresh delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsRefreshing(false);
+    // Reset view state
+    setZoom(100);
+    setRotation(0);
+    setSelectedBox(null);
+  };
+
+  const handleFullscreen = () => {
+    const viewerElement = document.querySelector('.document-viewer-container');
+    
+    if (!isFullscreen && viewerElement) {
+      if (viewerElement.requestFullscreen) {
+        viewerElement.requestFullscreen();
+      }
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  };
 
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 95) return 'border-green-500 bg-green-500/10';
@@ -46,7 +80,7 @@ const DocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: Docum
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full document-viewer-container">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center space-x-2">
@@ -68,11 +102,34 @@ const DocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: Docum
             <Button variant="outline" size="sm" onClick={handleZoomIn}>
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm">
-              <RotateCw className="h-4 w-4" />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRotate}
+              title="Rotate document"
+            >
+              <RefreshCcw className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm">
-              <Maximize className="h-4 w-4" />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              title="Refresh document"
+            >
+              {isRefreshing ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+              ) : (
+                <RefreshCcw className="h-4 w-4" />
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleFullscreen}
+              title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            >
+              <Fullscreen className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -85,7 +142,10 @@ const DocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: Docum
                 src={previewUrl} 
                 alt="Document preview" 
                 className="w-full h-full object-contain transition-transform duration-200"
-                style={{ transform: `scale(${zoom / 100})` }}
+                style={{ 
+                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+                  transformOrigin: 'center'
+                }}
               />
               
               {/* Bounding Boxes Overlay */}
@@ -102,7 +162,7 @@ const DocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: Docum
                         top: `${box.y}px`,
                         width: `${box.width}px`,
                         height: `${box.height}px`,
-                        transform: `scale(${zoom / 100})`,
+                        transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
                         transformOrigin: 'top left'
                       }}
                       onClick={() => setSelectedBox(selectedBox === box.id ? null : box.id)}
@@ -121,7 +181,7 @@ const DocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: Docum
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
-                <Maximize className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <Fullscreen className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>Upload a document to view with region detection</p>
               </div>
             </div>
