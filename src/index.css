@@ -118,6 +118,17 @@
       min-height: 44px;
       min-width: 44px;
     }
+    
+    /* Better text selection on mobile */
+    * {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    
+    /* Prevent zoom on input focus */
+    input, select, textarea {
+      font-size: 16px;
+    }
   }
 }
 
@@ -156,6 +167,14 @@
     background-color: hsl(var(--azure-blue-light));
   }
 
+  /* Mobile upload area improvements */
+  @media (max-width: 768px) {
+    .upload-area {
+      padding: 1rem;
+      min-height: 120px;
+    }
+  }
+
   .confidence-high {
     color: hsl(var(--confidence-high));
   }
@@ -182,6 +201,10 @@
   @media (max-width: 768px) {
     .document-region:hover {
       transform: none;
+    }
+    
+    .document-region:active {
+      transform: scale(0.98);
     }
   }
 
@@ -211,6 +234,55 @@
     
     .ocr-card-hover:active {
       transform: scale(0.98);
+    }
+  }
+
+  /* Mobile-specific improvements for TestOCR page */
+  .mobile-tab-trigger {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  @media (max-width: 640px) {
+    .mobile-tab-trigger {
+      font-size: 12px;
+      padding: 6px 8px;
+    }
+  }
+
+  /* Mobile model selector improvements */
+  .mobile-model-select {
+    min-height: 44px;
+  }
+
+  .mobile-model-option {
+    padding: 12px;
+    min-height: 44px;
+  }
+
+  /* Mobile document viewer */
+  .mobile-document-viewer {
+    min-height: 300px;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-document-viewer {
+      height: auto;
+    }
+  }
+
+  /* Better mobile scrolling */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  /* Mobile-friendly dropdown */
+  @media (max-width: 768px) {
+    [data-radix-popper-content-wrapper] {
+      max-height: 70vh !important;
+      overflow-y: auto;
     }
   }
 }
@@ -251,5 +323,80 @@
   .container {
     max-width: 100%;
     overflow-x: hidden;
+  }
+
+  /* Mobile-specific text sizes */
+  h1 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  /* Better button spacing on mobile */
+  .btn-group button + button {
+    margin-left: 0.5rem;
+  }
+
+  /* Mobile table improvements */
+  table {
+    font-size: 0.875rem;
+  }
+
+  /* Mobile form improvements */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  /* Mobile card improvements */
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  /* Better mobile tab handling */
+  [role="tablist"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [role="tab"] {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-document-viewer {
+    height: 50vh;
+  }
+  
+  .upload-area {
+    min-height: 100px;
+  }
+}
+
+/* Very small screen optimizations */
+@media (max-width: 375px) {
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  h1 {
+    font-size: 1.25rem;
+  }
+  
+  .mobile-tab-trigger {
+    font-size: 11px;
+    padding: 4px 6px;
   }
 }

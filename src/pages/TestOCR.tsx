@@ -6,13 +6,14 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, Play, CheckCircle, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
-import ProcessingSteps from "@/components/ProcessingSteps";
-import EnhancedModelSelector from "@/components/EnhancedModelSelector";
-import DocumentViewer from "@/components/DocumentViewer";
+import MobileProcessingSteps from "@/components/MobileProcessingSteps";
+import MobileModelSelector from "@/components/MobileModelSelector";
+import MobileDocumentViewer from "@/components/MobileDocumentViewer";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
 import { useToast } from "@/hooks/use-toast";
+
 const TestOCR = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -24,15 +25,13 @@ const TestOCR = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+
   const handleFileSelect = useCallback((file: File) => {
     console.log("File selected:", file);
     setSelectedFile(file);
     setCurrentStep(2);
 
-    // Create preview URL
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setOcrResult("");
@@ -42,6 +41,7 @@ const TestOCR = () => {
       description: `${file.name} is ready for advanced OCR processing.`
     });
   }, [toast]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
@@ -59,26 +59,31 @@ const TestOCR = () => {
       }
     }
   }, [handleFileSelect, toast]);
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
   }, []);
+
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
   }, []);
+
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       handleFileSelect(file);
     }
   };
+
   const simulateOCR = async () => {
     if (!selectedFile) return;
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
     console.log("Starting advanced OCR processing for:", selectedFile.name, "with model:", selectedModel);
+
     const getEnhancedModelSpecificText = () => {
       const modelDescriptions = {
         invoice: "Invoice data extraction with line items, totals, and vendor information",
@@ -90,6 +95,7 @@ const TestOCR = () => {
         print: "High-precision printed text extraction with layout preservation",
         mixed: "Combined handwritten and printed text processing"
       };
+
       return `AZURE DOCUMENT INTELLIGENCE STUDIO RESULT
 
 Document: "${selectedFile.name}"
@@ -243,7 +249,6 @@ PROCESSING STATISTICS:
 This enhanced result demonstrates professional-grade document intelligence capabilities with detailed analytics and structured data extraction.`;
     };
 
-    // Enhanced processing simulation
     const progressSteps = [0, 10, 25, 40, 55, 70, 85, 95, 100];
     for (const step of progressSteps) {
       setProgress(step);
@@ -257,161 +262,218 @@ This enhanced result demonstrates professional-grade document intelligence capab
       description: `Advanced processing completed with ${selectedModel} model.`
     });
   };
-  return <div className="min-h-screen bg-gray-50">
+
+  return (
+    <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="max-w-7xl mx-auto">
           {/* Enhanced Page Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Raya Intelligent Document</h1>
-            <p className="text-lg text-gray-600 max-w-4xl mx-auto">
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Raya Intelligent Document</h1>
+            <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
               Professional document processing platform with advanced OCR, structured data extraction, 
-              and comprehensive analytics. Choose from specialized models for optimal results.
+              and comprehensive analytics.
             </p>
           </div>
 
-          <ProcessingSteps currentStep={currentStep} />
+          <MobileProcessingSteps currentStep={currentStep} />
 
-          <div className="grid xl:grid-cols-3 gap-8">
-            {/* Left Column - Upload & Configuration */}
-            <div className="xl:col-span-1 space-y-6">
+          {/* Mobile-First Layout */}
+          <div className="space-y-6">
+            {/* Upload & Configuration - Full width on mobile */}
+            <div className="w-full">
               {/* Enhanced Upload Card */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Upload className="h-6 w-6" />
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                    <Upload className="h-5 w-5 sm:h-6 sm:w-6" />
                     <span>Document Upload</span>
                   </CardTitle>
-                  <CardDescription>
-                    Upload documents for advanced OCR processing and data extraction
+                  <CardDescription className="text-sm">
+                    Upload documents for advanced OCR processing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className={`upload-area p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all ${isDragOver ? 'drag-over' : ''}`} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onClick={() => fileInputRef.current?.click()}>
-                    <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileInput} />
+                  <div 
+                    className={`upload-area p-4 sm:p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all ${
+                      isDragOver ? 'drag-over' : ''
+                    }`}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept="image/*,.pdf"
+                      onChange={handleFileInput}
+                    />
                     
-                    {selectedFile ? <div className="space-y-4">
-                        <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
-                          <CheckCircle className="h-8 w-8 text-green-600" />
+                    {selectedFile ? (
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                          <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{selectedFile.name}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="font-semibold text-gray-900 text-sm sm:text-base break-all">{selectedFile.name}</p>
+                          <p className="text-xs sm:text-sm text-gray-500">
                             {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type}
                           </p>
                         </div>
-                        <Badge variant="outline" className="bg-green-50 text-green-700">Ready for processing</Badge>
-                      </div> : <div className="space-y-4">
-                        <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
-                          <Upload className="h-8 w-8 text-blue-600" />
+                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">Ready for processing</Badge>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+                          <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
                         </div>
                         <div>
-                          <p className="text-lg font-semibold text-gray-900">Drop your document here</p>
-                          <p className="text-gray-500">or click to browse files</p>
-                          <p className="text-xs text-gray-400 mt-2">Supports JPG, PNG, PDF up to 10MB</p>
+                          <p className="text-base sm:text-lg font-semibold text-gray-900">Drop your document here</p>
+                          <p className="text-sm text-gray-500">or tap to browse files</p>
+                          <p className="text-xs text-gray-400 mt-1">Supports JPG, PNG, PDF up to 10MB</p>
                         </div>
-                        <Badge variant="secondary">Ready for upload</Badge>
-                      </div>}
+                        <Badge variant="secondary" className="text-xs">Ready for upload</Badge>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
               {/* Enhanced Model Configuration */}
-              {selectedFile && <Card>
-                  <CardHeader>
-                    <CardTitle>Model Configuration</CardTitle>
-                    <CardDescription>Select the optimal processing model for your document</CardDescription>
+              {selectedFile && (
+                <Card className="mt-4">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg sm:text-xl">Model Configuration</CardTitle>
+                    <CardDescription className="text-sm">Select the optimal processing model</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <EnhancedModelSelector selectedModel={selectedModel} onModelChange={model => {
-                  setSelectedModel(model);
-                  setCurrentStep(3);
-                }} />
+                    <MobileModelSelector 
+                      selectedModel={selectedModel} 
+                      onModelChange={(model) => {
+                        setSelectedModel(model);
+                        setCurrentStep(3);
+                      }} 
+                    />
                     
-                    <Button onClick={simulateOCR} disabled={isProcessing} className="w-full" size="lg">
-                      {isProcessing ? <>
+                    <Button 
+                      onClick={simulateOCR} 
+                      disabled={isProcessing} 
+                      className="w-full h-12 text-base"
+                      size="lg"
+                    >
+                      {isProcessing ? (
+                        <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Processing with {selectedModel} model...
-                        </> : <>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
                           <Play className="h-4 w-4 mr-2" />
                           Start Document Intelligence
-                        </>}
+                        </>
+                      )}
                     </Button>
                     
-                    {isProcessing && <div className="mt-4">
+                    {isProcessing && (
+                      <div className="mt-4">
                         <div className="flex justify-between text-sm text-gray-600 mb-2">
                           <span>Processing document...</span>
                           <span>{progress}%</span>
                         </div>
                         <Progress value={progress} className="w-full" />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Advanced analysis in progress...
-                        </p>
-                      </div>}
+                        <p className="text-xs text-gray-500 mt-1">Advanced analysis in progress...</p>
+                      </div>
+                    )}
                   </CardContent>
-                </Card>}
+                </Card>
+              )}
             </div>
 
-            {/* Right Column - Document Viewer */}
-            <div className="xl:col-span-2">
-              <DocumentViewer previewUrl={previewUrl} selectedModel={selectedModel} />
-            </div>
+            {/* Document Viewer - Full width on mobile */}
+            {previewUrl && (
+              <div className="w-full">
+                <MobileDocumentViewer 
+                  previewUrl={previewUrl} 
+                  selectedModel={selectedModel} 
+                />
+              </div>
+            )}
           </div>
 
           {/* Enhanced Results Section */}
-          {(ocrResult || isProcessing) && <Card className="mt-8">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="h-6 w-6" />
+          {(ocrResult || isProcessing) && (
+            <Card className="mt-6 sm:mt-8">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                  <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
                   <span>Document Intelligence Results</span>
                 </CardTitle>
-                <CardDescription>
-                  Comprehensive analysis, structured data extraction, and processing analytics
+                <CardDescription className="text-sm">
+                  Comprehensive analysis and data extraction
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {isProcessing ? <div className="flex items-center justify-center h-64">
+                {isProcessing ? (
+                  <div className="flex items-center justify-center h-32 sm:h-64">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                      <p className="text-gray-600">Running advanced document intelligence...</p>
+                      <p className="text-gray-600 text-sm">Running advanced document intelligence...</p>
                     </div>
-                  </div> : <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
-                    <TabsList className="grid w-full grid-cols-4">
-                      <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                      <TabsTrigger value="structured">Structured Data</TabsTrigger>
-                      <TabsTrigger value="advanced">Advanced Results</TabsTrigger>
-                      <TabsTrigger value="raw">Raw Output</TabsTrigger>
+                  </div>
+                ) : (
+                  <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                      <TabsTrigger value="analytics" className="text-xs sm:text-sm p-2 sm:p-3">Analytics</TabsTrigger>
+                      <TabsTrigger value="structured" className="text-xs sm:text-sm p-2 sm:p-3">Data</TabsTrigger>
+                      <TabsTrigger value="advanced" className="text-xs sm:text-sm p-2 sm:p-3 hidden sm:flex">Advanced</TabsTrigger>
+                      <TabsTrigger value="raw" className="text-xs sm:text-sm p-2 sm:p-3">Raw</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="analytics" className="mt-6">
-                      <AnalyticsDashboard selectedModel={selectedModel} processingTime={selectedModel === 'print' ? '1.8 seconds' : selectedModel === 'handwriting' ? '3.2 seconds' : '2.5 seconds'} overallConfidence={selectedModel === 'print' ? 99.1 : selectedModel === 'handwriting' ? 97.2 : 98.3} />
+                    <TabsContent value="analytics" className="mt-4 sm:mt-6">
+                      <AnalyticsDashboard 
+                        selectedModel={selectedModel} 
+                        processingTime={selectedModel === 'print' ? '1.8 seconds' : selectedModel === 'handwriting' ? '3.2 seconds' : '2.5 seconds'} 
+                        overallConfidence={selectedModel === 'print' ? 99.1 : selectedModel === 'handwriting' ? 97.2 : 98.3} 
+                      />
                     </TabsContent>
 
-                    <TabsContent value="structured" className="mt-6">
+                    <TabsContent value="structured" className="mt-4 sm:mt-6">
                       <StructuredDataViewer rawText={ocrResult} selectedModel={selectedModel} />
                     </TabsContent>
 
-                    <TabsContent value="advanced" className="mt-6">
+                    <TabsContent value="advanced" className="mt-4 sm:mt-6">
                       <AdvancedResults rawText={ocrResult} isProcessing={isProcessing} selectedModel={selectedModel} />
                     </TabsContent>
 
-                    <TabsContent value="raw" className="mt-6">
+                    <TabsContent value="raw" className="mt-4 sm:mt-6">
                       <Card>
-                        <CardHeader>
-                          <CardTitle>Raw OCR Output</CardTitle>
-                          <CardDescription>Unprocessed text extraction results</CardDescription>
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-lg">Raw OCR Output</CardTitle>
+                          <CardDescription className="text-sm">Unprocessed text extraction results</CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <textarea value={ocrResult} className="w-full h-96 bg-gray-50 border rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm" placeholder="Raw OCR results will appear here..." readOnly />
+                          <textarea 
+                            value={ocrResult} 
+                            className="w-full h-64 sm:h-96 bg-gray-50 border rounded-lg p-3 sm:p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-xs sm:text-sm" 
+                            placeholder="Raw OCR results will appear here..." 
+                            readOnly 
+                          />
                         </CardContent>
                       </Card>
                     </TabsContent>
-                  </Tabs>}
+                  </Tabs>
+                )}
               </CardContent>
-            </Card>}
+            </Card>
+          )}
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default TestOCR;
