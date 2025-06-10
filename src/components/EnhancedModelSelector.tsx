@@ -4,6 +4,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Brain, FileText, Layers, Receipt, CreditCard, FileCheck, IdCard, Calculator } from "lucide-react";
 
+interface ModelData {
+  value: string;
+  label: string;
+  description: string;
+  icon: React.ReactElement;
+  accuracy: string;
+  speed: string;
+  isSpecialized?: boolean;
+}
+
 interface EnhancedModelSelectorProps {
   selectedModel: string;
   onModelChange: (model: string) => void;
@@ -38,7 +48,7 @@ const EnhancedModelSelector = ({ selectedModel, onModelChange }: EnhancedModelSe
           accuracy: "98.9%",
           speed: "Fast"
         }
-      ]
+      ] as ModelData[]
     },
     {
       category: "Specialized Models",
@@ -88,7 +98,7 @@ const EnhancedModelSelector = ({ selectedModel, onModelChange }: EnhancedModelSe
           speed: "Medium",
           isSpecialized: true
         }
-      ]
+      ] as ModelData[]
     }
   ];
 
