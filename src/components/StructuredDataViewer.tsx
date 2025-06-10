@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +19,31 @@ interface StructuredDataViewerProps {
 const StructuredDataViewer = ({ rawText, selectedModel, azureResult }: StructuredDataViewerProps) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("hierarchy");
+
+  const formatTableRows = (table: any) => {
+    if (!table.cells) return [];
+    
+    const rows: any[][] = [];
+    const maxRow = Math.max(...table.cells.map((cell: any) => cell.rowIndex));
+    const maxCol = Math.max(...table.cells.map((cell: any) => cell.columnIndex));
+    
+    // Initialize rows array
+    for (let i = 0; i <= maxRow; i++) {
+      rows[i] = new Array(maxCol + 1).fill('');
+    }
+    
+    // Fill cells
+    table.cells.forEach((cell: any) => {
+      rows[cell.rowIndex][cell.columnIndex] = cell.content;
+    });
+    
+    // Convert to expected format
+    return rows.map((row, index) => ({
+      cells: row,
+      isHeader: index === 0,
+      confidence: 95.0
+    }));
+  };
 
   // Enhanced structured data based on model type and Azure results
   const getStructuredData = () => {
@@ -124,7 +150,7 @@ const StructuredDataViewer = ({ rawText, selectedModel, azureResult }: Structure
         id: tableIndex + 1,
         confidence: 94.5,
         boundingBox: { x: 50, y: 150, width: 400, height: 120 },
-        rows: this.formatTableRows(table)
+        rows: formatTableRows(table)
       })) || [],
       keyValuePairs: [
         ...(azureResult.name ? [{ key: "Name", value: azureResult.name, confidence: 97.8 }] : []),
@@ -137,31 +163,6 @@ const StructuredDataViewer = ({ rawText, selectedModel, azureResult }: Structure
     };
 
     return azureData;
-  };
-
-  const formatTableRows = (table: any) => {
-    if (!table.cells) return [];
-    
-    const rows: any[][] = [];
-    const maxRow = Math.max(...table.cells.map((cell: any) => cell.rowIndex));
-    const maxCol = Math.max(...table.cells.map((cell: any) => cell.columnIndex));
-    
-    // Initialize rows array
-    for (let i = 0; i <= maxRow; i++) {
-      rows[i] = new Array(maxCol + 1).fill('');
-    }
-    
-    // Fill cells
-    table.cells.forEach((cell: any) => {
-      rows[cell.rowIndex][cell.columnIndex] = cell.content;
-    });
-    
-    // Convert to expected format
-    return rows.map((row, index) => ({
-      cells: row,
-      isHeader: index === 0,
-      confidence: 95.0
-    }));
   };
 
   const copyToClipboard = (content: string, type: string) => {
