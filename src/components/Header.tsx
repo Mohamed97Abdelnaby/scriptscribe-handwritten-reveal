@@ -13,8 +13,8 @@ const Header = () => {
           {/* Logo and Company Name */}
           <Link to="/" className="flex items-center space-x-3">
             <img 
-              src="/lovable-uploads/2ad1b136-a3ee-417b-b7ef-58127b986ccc.png" 
-              alt="Raya Information Technology" 
+              src="/lovable-uploads/8a37b655-fbf5-4c89-952f-73704623babd.png" 
+              alt="RAYA Information Technology" 
               className="h-12 w-auto"
             />
             <div>
