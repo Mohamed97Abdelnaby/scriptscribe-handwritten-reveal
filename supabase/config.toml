@@ -1,5 +1,0 @@
-
-project_id = "jasjrbplyqvwngescmql"
-
-[functions.azure-document-intelligence]
-verify_jwt = false
