@@ -1,41 +1,25 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Zap, Shield, Clock, ArrowRight, CheckCircle } from "lucide-react";
 import Header from "@/components/Header";
-
 const Index = () => {
-  const features = [
-    {
-      icon: <Zap className="h-6 w-6" />,
-      title: "Lightning Fast",
-      description: "Process documents in seconds with our advanced OCR technology"
-    },
-    {
-      icon: <Shield className="h-6 w-6" />,
-      title: "Highly Accurate",
-      description: "99.9% accuracy on handwritten and printed documents"
-    },
-    {
-      icon: <Clock className="h-6 w-6" />,
-      title: "Real-time Processing",
-      description: "Instant results with live preview and editing capabilities"
-    }
-  ];
-
-  const services = [
-    "Handwritten Text Recognition",
-    "Printed Document OCR",
-    "Multi-language Support",
-    "Document Structure Analysis",
-    "Form Data Extraction",
-    "Batch Processing"
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+  const features = [{
+    icon: <Zap className="h-6 w-6" />,
+    title: "Lightning Fast",
+    description: "Process documents in seconds with our advanced OCR technology"
+  }, {
+    icon: <Shield className="h-6 w-6" />,
+    title: "Highly Accurate",
+    description: "99.9% accuracy on handwritten and printed documents"
+  }, {
+    icon: <Clock className="h-6 w-6" />,
+    title: "Real-time Processing",
+    description: "Instant results with live preview and editing capabilities"
+  }];
+  const services = ["Handwritten Text Recognition", "Printed Document OCR", "Multi-language Support", "Document Structure Analysis", "Form Data Extraction", "Batch Processing"];
+  return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
       <Header />
       
       {/* Hero Section */}
@@ -46,7 +30,7 @@ const Index = () => {
           </Badge>
           <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
             Transform Your
-            <span className="ocr-gradient bg-clip-text text-transparent"> Handwritten Documents</span>
+            <span className="ocr-gradient bg-clip-text text-slate-800"> Handwritten Documents</span>
             <br />into Digital Text
           </h1>
           <p className="text-xl text-gray-600 mb-8 leading-relaxed">
@@ -78,8 +62,7 @@ const Index = () => {
         </div>
         
         <div className="grid md:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <Card key={index} className="text-center ocr-card-hover">
+          {features.map((feature, index) => <Card key={index} className="text-center ocr-card-hover">
               <CardHeader>
                 <div className="w-12 h-12 mx-auto mb-4 ocr-gradient rounded-lg flex items-center justify-center text-white">
                   {feature.icon}
@@ -89,8 +72,7 @@ const Index = () => {
               <CardContent>
                 <CardDescription className="text-base">{feature.description}</CardDescription>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
       </section>
 
@@ -109,12 +91,10 @@ const Index = () => {
               <div>
                 <h3 className="text-2xl font-semibold text-gray-900 mb-6">What We Offer</h3>
                 <div className="space-y-4">
-                  {services.map((service, index) => (
-                    <div key={index} className="flex items-center space-x-3">
+                  {services.map((service, index) => <div key={index} className="flex items-center space-x-3">
                       <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                       <span className="text-gray-700">{service}</span>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
               
@@ -161,8 +141,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
