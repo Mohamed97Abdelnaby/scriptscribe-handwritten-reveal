@@ -13,12 +13,14 @@ import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const TestOCR = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrResult, setOcrResult] = useState<string>("");
+  const [azureResult, setAzureResult] = useState<any>(null);
   const [progress, setProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("mixed");
@@ -35,10 +37,11 @@ const TestOCR = () => {
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setOcrResult("");
+    setAzureResult(null);
     setProgress(0);
     toast({
       title: "File uploaded successfully",
-      description: `${file.name} is ready for advanced OCR processing.`
+      description: `${file.name} is ready for Azure Document Intelligence processing.`
     });
   }, [toast]);
 
@@ -77,190 +80,63 @@ const TestOCR = () => {
     }
   };
 
-  const simulateOCR = async () => {
+  const processWithAzure = async () => {
     if (!selectedFile) return;
+
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting advanced OCR processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
 
-    const getEnhancedModelSpecificText = () => {
-      const modelDescriptions = {
-        invoice: "Invoice data extraction with line items, totals, and vendor information",
-        receipt: "Receipt processing with merchant details, items, and tax information",
-        form: "Form field extraction with structured key-value pairs",
-        id: "Identity document processing with personal information extraction",
-        financial: "Financial statement analysis with account details and transactions",
-        handwriting: "Handwriting recognition with advanced character analysis",
-        print: "High-precision printed text extraction with layout preservation",
-        mixed: "Combined handwritten and printed text processing"
-      };
+    try {
+      // Convert file to base64
+      const fileBuffer = await selectedFile.arrayBuffer();
+      const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
 
-      return `AZURE DOCUMENT INTELLIGENCE STUDIO RESULT
+      // Simulate progress while calling the API
+      const progressInterval = setInterval(() => {
+        setProgress(prev => Math.min(prev + 10, 90));
+      }, 500);
 
-Document: "${selectedFile.name}"
-Model: ${selectedModel.toUpperCase()} PROCESSING ENGINE
-Processing Mode: ${modelDescriptions[selectedModel as keyof typeof modelDescriptions] || 'Advanced OCR processing'}
+      // Call our Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
+        body: {
+          fileData: base64Data,
+          fileName: selectedFile.name,
+          selectedModel: selectedModel
+        }
+      });
 
-=== DOCUMENT ANALYSIS ===
-✓ Document loaded and preprocessed
-✓ Layout analysis completed
-✓ Text regions identified and classified
-✓ Confidence scoring applied
-✓ Structured data extraction completed
+      clearInterval(progressInterval);
+      setProgress(100);
 
-Processing Configuration:
-• Engine: Azure Document Intelligence v3.1
-• Model: ${selectedModel === 'invoice' ? 'prebuilt-invoice' : selectedModel === 'receipt' ? 'prebuilt-receipt' : selectedModel === 'form' ? 'prebuilt-document' : selectedModel === 'id' ? 'prebuilt-idDocument' : `custom-${selectedModel}`}
-• API Version: 2023-07-31
-• Processing Mode: ${selectedModel.includes('invoice') || selectedModel.includes('receipt') || selectedModel.includes('form') ? 'Structured Extraction' : 'Text Recognition'}
+      if (error) {
+        throw new Error(error.message || 'Failed to process document');
+      }
 
-=== EXTRACTION RESULTS ===
+      console.log('Azure processing completed:', data);
+      
+      setAzureResult(data);
+      setOcrResult(data.content || 'No text content extracted');
+      setCurrentStep(4);
+      
+      toast({
+        title: "Azure Document Intelligence Complete!",
+        description: `Document processed successfully with ${selectedModel} model.`
+      });
 
-${selectedModel === 'invoice' ? `
-INVOICE DATA EXTRACTED:
-• Vendor: Acme Corporation
-• Invoice #: INV-2024-001  
-• Date: June 10, 2025
-• Due Date: July 10, 2025
-• Subtotal: $1,150.00
-• Tax: $92.00
-• Total: $1,242.00
-
-LINE ITEMS:
-1. Professional Services - Qty: 10 hrs - Rate: $100.00 - Amount: $1,000.00
-2. Consultation Fee - Qty: 1 - Rate: $150.00 - Amount: $150.00
-
-VENDOR DETAILS:
-• Company: Acme Corporation
-• Address: 123 Business Ave, Suite 100, City, ST 12345
-• Phone: (555) 123-4567
-• Email: billing@acme.com
-` : selectedModel === 'receipt' ? `
-RECEIPT DATA EXTRACTED:
-• Merchant: SuperMart Grocery
-• Date: June 10, 2025
-• Time: 14:32:18
-• Receipt #: 789456123
-• Total: $47.83
-• Tax: $3.58
-• Payment Method: Credit Card ****1234
-
-ITEMS PURCHASED:
-1. Organic Bananas - $3.99
-2. Whole Milk (1 Gal) - $4.29
-3. Bread (Whole Wheat) - $2.89
-4. Chicken Breast (2 lbs) - $12.98
-5. Mixed Vegetables - $6.49
-6. Orange Juice - $3.99
-7. Greek Yogurt - $5.99
-8. Apples (3 lbs) - $4.47
-` : selectedModel === 'form' ? `
-FORM DATA EXTRACTED:
-
-PERSONAL INFORMATION:
-• Full Name: John Michael Smith
-• Date of Birth: January 15, 1990
-• Social Security: XXX-XX-6789
-• Phone: (555) 987-6543
-• Email: john.smith@email.com
-
-ADDRESS INFORMATION:
-• Street: 456 Main Street, Apt 2B
-• City: Springfield
-• State: Illinois
-• ZIP Code: 62701
-• Country: United States
-
-EMPLOYMENT DETAILS:
-• Employer: Tech Solutions Inc.
-• Position: Software Engineer
-• Start Date: March 1, 2020
-• Annual Salary: $85,000
-• Department: Engineering
-` : selectedModel === 'id' ? `
-IDENTITY DOCUMENT EXTRACTED:
-
-DOCUMENT TYPE: Driver's License
-STATE: California
-LICENSE CLASS: C
-
-PERSONAL INFORMATION:
-• Name: SMITH, JOHN MICHAEL
-• Date of Birth: 01/15/1990
-• License Number: D1234567
-• Issue Date: 06/15/2023
-• Expiration: 01/15/2031
-• Sex: M
-• Height: 5'10"
-• Weight: 175 lbs
-• Eye Color: Brown
-• Hair Color: Brown
-
-ADDRESS:
-• 456 MAIN STREET
-• SPRINGFIELD, CA 62701
-
-RESTRICTIONS: NONE
-ENDORSEMENTS: NONE
-` : `
-DOCUMENT CONTENT EXTRACTED:
-
-This is a demonstration of our Azure Document Intelligence-inspired OCR platform processing your uploaded document with the ${selectedModel} model.
-
-Advanced Text Recognition Features:
-- Multi-language support with automatic detection
-- High-precision character recognition: 99.2% accuracy
-- Layout analysis with reading order detection
-- Table structure preservation and extraction
-- Form field identification and classification
-- Handwriting recognition with neural networks
-
-Sample Extracted Content:
-The quick brown fox jumps over the lazy dog. This sentence demonstrates our advanced OCR capabilities including character recognition, word spacing, and punctuation handling.
-
-TECHNICAL ANALYSIS:
-• Document Type: ${selectedFile.type.includes('pdf') ? 'PDF Document' : 'Image Document'}
-• Page Count: 1
-• Text Regions: 12 detected
-• Table Count: ${selectedModel === 'invoice' || selectedModel === 'financial' ? '2' : '0'}
-• Form Fields: ${selectedModel === 'form' ? '8' : '0'}
-• Language: English (confidence: 99.8%)
-• Text Direction: Left-to-right
-• Reading Order: Top-to-bottom
-`}
-
-PROCESSING STATISTICS:
-• Total Characters: ${Math.floor(Math.random() * 1000) + 1200}
-• Words Identified: ${Math.floor(Math.random() * 200) + 250}
-• Lines Processed: ${Math.floor(Math.random() * 20) + 15}
-• Confidence Score: ${selectedModel === 'print' ? '99.1%' : selectedModel === 'handwriting' ? '97.2%' : '98.3%'}
-• Processing Time: ${selectedModel === 'print' ? '1.8' : selectedModel === 'handwriting' ? '3.2' : '2.5'} seconds
-• Model Accuracy: ${selectedModel === 'print' ? '99.8%' : selectedModel === 'handwriting' ? '99.2%' : '98.9%'}
-
-=== QUALITY METRICS ===
-✓ Image Quality: Excellent
-✓ Text Clarity: High
-✓ Layout Complexity: Medium
-✓ Noise Level: Low
-✓ Skew Correction: Applied
-✓ Enhancement: Auto-optimized
-
-This enhanced result demonstrates professional-grade document intelligence capabilities with detailed analytics and structured data extraction.`;
-    };
-
-    const progressSteps = [0, 10, 25, 40, 55, 70, 85, 95, 100];
-    for (const step of progressSteps) {
-      setProgress(step);
-      await new Promise(resolve => setTimeout(resolve, selectedModel === 'print' ? 120 : 180));
+    } catch (error) {
+      console.error('Error processing document:', error);
+      setProgress(0);
+      setCurrentStep(2);
+      toast({
+        title: "Processing Failed",
+        description: error instanceof Error ? error.message : "Failed to process document. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
     }
-    setOcrResult(getEnhancedModelSpecificText());
-    setIsProcessing(false);
-    setCurrentStep(4);
-    toast({
-      title: "Document Intelligence Complete!",
-      description: `Advanced processing completed with ${selectedModel} model.`
-    });
   };
 
   return (
@@ -273,8 +149,8 @@ This enhanced result demonstrates professional-grade document intelligence capab
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Raya Intelligent Document</h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Professional document processing platform with advanced OCR, structured data extraction, 
-              and comprehensive analytics.
+              Professional document processing platform powered by Azure Document Intelligence with advanced OCR, 
+              structured data extraction, and comprehensive analytics.
             </p>
           </div>
 
@@ -292,7 +168,7 @@ This enhanced result demonstrates professional-grade document intelligence capab
                     <span>Document Upload</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Upload documents for advanced OCR processing
+                    Upload documents for Azure Document Intelligence processing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -347,8 +223,8 @@ This enhanced result demonstrates professional-grade document intelligence capab
               {selectedFile && (
                 <Card className="mt-4">
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl">Model Configuration</CardTitle>
-                    <CardDescription className="text-sm">Select the optimal processing model</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Azure Model Configuration</CardTitle>
+                    <CardDescription className="text-sm">Select the optimal Azure Document Intelligence model</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <MobileModelSelector 
@@ -360,7 +236,7 @@ This enhanced result demonstrates professional-grade document intelligence capab
                     />
                     
                     <Button 
-                      onClick={simulateOCR} 
+                      onClick={processWithAzure} 
                       disabled={isProcessing} 
                       className="w-full h-12 text-base"
                       size="lg"
@@ -368,12 +244,12 @@ This enhanced result demonstrates professional-grade document intelligence capab
                       {isProcessing ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Processing...
+                          Processing with Azure...
                         </>
                       ) : (
                         <>
                           <Play className="h-4 w-4 mr-2" />
-                          Start Document Intelligence
+                          Start Azure Document Intelligence
                         </>
                       )}
                     </Button>
@@ -381,11 +257,11 @@ This enhanced result demonstrates professional-grade document intelligence capab
                     {isProcessing && (
                       <div className="mt-4">
                         <div className="flex justify-between text-sm text-gray-600 mb-2">
-                          <span>Processing document...</span>
+                          <span>Processing with Azure Document Intelligence...</span>
                           <span>{progress}%</span>
                         </div>
                         <Progress value={progress} className="w-full" />
-                        <p className="text-xs text-gray-500 mt-1">Advanced analysis in progress...</p>
+                        <p className="text-xs text-gray-500 mt-1">Azure analysis in progress...</p>
                       </div>
                     )}
                   </CardContent>
@@ -410,10 +286,10 @@ This enhanced result demonstrates professional-grade document intelligence capab
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
                   <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span>Document Intelligence Results</span>
+                  <span>Azure Document Intelligence Results</span>
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Comprehensive analysis and data extraction
+                  Comprehensive analysis and data extraction powered by Azure
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -421,7 +297,7 @@ This enhanced result demonstrates professional-grade document intelligence capab
                   <div className="flex items-center justify-center h-32 sm:h-64">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                      <p className="text-gray-600 text-sm">Running advanced document intelligence...</p>
+                      <p className="text-gray-600 text-sm">Running Azure Document Intelligence...</p>
                     </div>
                   </div>
                 ) : (
@@ -436,13 +312,13 @@ This enhanced result demonstrates professional-grade document intelligence capab
                     <TabsContent value="analytics" className="mt-4 sm:mt-6">
                       <AnalyticsDashboard 
                         selectedModel={selectedModel} 
-                        processingTime={selectedModel === 'print' ? '1.8 seconds' : selectedModel === 'handwriting' ? '3.2 seconds' : '2.5 seconds'} 
-                        overallConfidence={selectedModel === 'print' ? 99.1 : selectedModel === 'handwriting' ? 97.2 : 98.3} 
+                        processingTime="Real Azure processing time" 
+                        overallConfidence={azureResult?.confidence ? Math.round(azureResult.confidence * 100) : 98.3} 
                       />
                     </TabsContent>
 
                     <TabsContent value="structured" className="mt-4 sm:mt-6">
-                      <StructuredDataViewer rawText={ocrResult} selectedModel={selectedModel} />
+                      <StructuredDataViewer rawText={ocrResult} selectedModel={selectedModel} azureResult={azureResult} />
                     </TabsContent>
 
                     <TabsContent value="advanced" className="mt-4 sm:mt-6">
@@ -452,14 +328,14 @@ This enhanced result demonstrates professional-grade document intelligence capab
                     <TabsContent value="raw" className="mt-4 sm:mt-6">
                       <Card>
                         <CardHeader className="pb-4">
-                          <CardTitle className="text-lg">Raw OCR Output</CardTitle>
-                          <CardDescription className="text-sm">Unprocessed text extraction results</CardDescription>
+                          <CardTitle className="text-lg">Raw Azure OCR Output</CardTitle>
+                          <CardDescription className="text-sm">Unprocessed text extraction results from Azure</CardDescription>
                         </CardHeader>
                         <CardContent>
                           <textarea 
                             value={ocrResult} 
                             className="w-full h-64 sm:h-96 bg-gray-50 border rounded-lg p-3 sm:p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-xs sm:text-sm" 
-                            placeholder="Raw OCR results will appear here..." 
+                            placeholder="Raw Azure OCR results will appear here..." 
                             readOnly 
                           />
                         </CardContent>
