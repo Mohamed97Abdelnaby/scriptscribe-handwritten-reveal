@@ -12,14 +12,20 @@ import ConfidenceIndicator from "./ConfidenceIndicator";
 interface StructuredDataViewerProps {
   rawText: string;
   selectedModel: string;
+  structuredData?: any;
 }
 
-const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerProps) => {
+const StructuredDataViewer = ({ rawText, selectedModel, structuredData }: StructuredDataViewerProps) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("hierarchy");
 
-  // Enhanced structured data based on model type
+  // Use real Azure data if available, otherwise fall back to demo data
   const getStructuredData = () => {
+    if (structuredData) {
+      return structuredData;
+    }
+
+    // Fallback demo data for when Azure isn't available
     const baseData = {
       hierarchy: {
         pages: [
@@ -28,24 +34,13 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
             lines: [
               {
                 id: 1,
-                text: "ADVANCED OCR RESULT",
+                text: "DEMO OCR RESULT",
                 confidence: 98.5,
                 boundingBox: { x: 10, y: 20, width: 200, height: 25 },
                 words: [
-                  { text: "ADVANCED", confidence: 99.1, boundingBox: { x: 10, y: 20, width: 80, height: 25 } },
+                  { text: "DEMO", confidence: 99.1, boundingBox: { x: 10, y: 20, width: 80, height: 25 } },
                   { text: "OCR", confidence: 98.8, boundingBox: { x: 95, y: 20, width: 35, height: 25 } },
                   { text: "RESULT", confidence: 97.6, boundingBox: { x: 135, y: 20, width: 65, height: 25 } }
-                ]
-              },
-              {
-                id: 2,
-                text: "Document Analysis Complete",
-                confidence: 96.2,
-                boundingBox: { x: 10, y: 60, width: 220, height: 20 },
-                words: [
-                  { text: "Document", confidence: 97.1, boundingBox: { x: 10, y: 60, width: 70, height: 20 } },
-                  { text: "Analysis", confidence: 95.8, boundingBox: { x: 85, y: 60, width: 65, height: 20 } },
-                  { text: "Complete", confidence: 95.7, boundingBox: { x: 155, y: 60, width: 65, height: 20 } }
                 ]
               }
             ]
@@ -59,29 +54,20 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
           boundingBox: { x: 50, y: 150, width: 400, height: 120 },
           rows: [
             { cells: ["Item", "Quantity", "Price", "Total"], isHeader: true, confidence: 96.8 },
-            { cells: ["Widget A", "2", "$10.00", "$20.00"], isHeader: false, confidence: 95.2 },
-            { cells: ["Widget B", "1", "$15.00", "$15.00"], isHeader: false, confidence: 94.7 },
-            { cells: ["Total", "", "", "$35.00"], isHeader: false, confidence: 97.1 }
+            { cells: ["Demo Item", "1", "$10.00", "$10.00"], isHeader: false, confidence: 95.2 }
           ]
         }
       ] : [],
-      keyValuePairs: selectedModel === 'form' || selectedModel === 'id' ? [
-        { key: "Name", value: "John Doe", confidence: 97.8 },
-        { key: "Date of Birth", value: "01/15/1990", confidence: 96.5 },
-        { key: "ID Number", value: "123456789", confidence: 98.2 },
-        { key: "Address", value: "123 Main St, City, State", confidence: 94.8 }
-      ] : [
-        { key: "Document Type", value: "Sample Document", confidence: 98.0 },
-        { key: "Processing Model", value: selectedModel, confidence: 100 },
-        { key: "Total Words", value: rawText.split(' ').length.toString(), confidence: 95.5 },
-        { key: "Total Characters", value: rawText.length.toString(), confidence: 99.2 }
+      keyValuePairs: [
+        { key: "Document Type", value: "Demo Document", confidence: 98.0 },
+        { key: "Processing Model", value: selectedModel, confidence: 100 }
       ]
     };
 
     return baseData;
   };
 
-  const structuredData = getStructuredData();
+  const displayData = getStructuredData();
 
   const copyToClipboard = (content: string, type: string) => {
     navigator.clipboard.writeText(content);
@@ -94,11 +80,12 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
   const downloadJSON = () => {
     const jsonData = {
       rawText,
-      structuredData,
+      structuredData: displayData,
       metadata: {
         model: selectedModel,
         timestamp: new Date().toISOString(),
-        version: "2.0"
+        version: "2.0",
+        source: structuredData ? "Azure Document Intelligence" : "Demo Data"
       }
     };
     
@@ -123,7 +110,7 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => copyToClipboard(JSON.stringify(structuredData, null, 2), "Structured data")}
+          onClick={() => copyToClipboard(JSON.stringify(displayData, null, 2), "Structured data")}
         >
           <Copy className="h-4 w-4 mr-1" />
           Copy JSON
@@ -132,6 +119,11 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
           <FileJson className="h-4 w-4 mr-1" />
           Download JSON
         </Button>
+        {structuredData && (
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            Real Azure Data
+          </Badge>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -146,11 +138,14 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
           <Card>
             <CardHeader>
               <CardTitle>Document Hierarchy</CardTitle>
-              <CardDescription>Pages → Lines → Words structure with confidence scores</CardDescription>
+              <CardDescription>
+                Pages → Lines → Words structure with confidence scores
+                {structuredData && " (from Azure Document Intelligence)"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {structuredData.hierarchy.pages.map((page, pageIndex) => (
+                {displayData.hierarchy.pages.map((page, pageIndex) => (
                   <div key={pageIndex} className="border rounded-lg p-4">
                     <h4 className="font-semibold mb-3">Page {page.pageNumber}</h4>
                     <div className="space-y-3">
@@ -189,12 +184,15 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
           <Card>
             <CardHeader>
               <CardTitle>Extracted Tables</CardTitle>
-              <CardDescription>Structured table data with cell-level confidence</CardDescription>
+              <CardDescription>
+                Structured table data with cell-level confidence
+                {structuredData && " (from Azure Document Intelligence)"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {structuredData.tables.length > 0 ? (
+              {displayData.tables.length > 0 ? (
                 <div className="space-y-6">
-                  {structuredData.tables.map((table, tableIndex) => (
+                  {displayData.tables.map((table, tableIndex) => (
                     <div key={tableIndex} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-semibold">Table {tableIndex + 1}</h4>
@@ -245,7 +243,10 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
           <Card>
             <CardHeader>
               <CardTitle>Key-Value Pairs</CardTitle>
-              <CardDescription>Extracted form fields and document metadata</CardDescription>
+              <CardDescription>
+                Extracted form fields and document metadata
+                {structuredData && " (from Azure Document Intelligence)"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -257,7 +258,7 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {structuredData.keyValuePairs.map((item, index) => (
+                  {displayData.keyValuePairs.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{item.key}</TableCell>
                       <TableCell>{item.value}</TableCell>
@@ -278,11 +279,14 @@ const StructuredDataViewer = ({ rawText, selectedModel }: StructuredDataViewerPr
           <Card>
             <CardHeader>
               <CardTitle>Coordinate Data</CardTitle>
-              <CardDescription>Precise positioning information for each text element</CardDescription>
+              <CardDescription>
+                Precise positioning information for each text element
+                {structuredData && " (from Azure Document Intelligence)"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {structuredData.hierarchy.pages[0].lines.map((line) => (
+                {displayData.hierarchy.pages[0].lines.map((line) => (
                   <div key={line.id} className="bg-gray-50 rounded p-3">
                     <div className="font-medium mb-2">"{line.text}"</div>
                     <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
