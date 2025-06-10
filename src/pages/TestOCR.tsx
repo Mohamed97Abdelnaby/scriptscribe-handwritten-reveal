@@ -13,6 +13,10 @@ import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
 import { useToast } from "@/hooks/use-toast";
+import AzureCredentialsForm from "@/components/AzureCredentialsForm";
+import { azureDocumentIntelligence } from "@/services/azureDocumentIntelligence";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const TestOCR = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -26,6 +30,10 @@ const TestOCR = () => {
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const [azureCredentialsConfigured, setAzureCredentialsConfigured] = useState(false);
+  const [lovableApiEndpoint, setLovableApiEndpoint] = useState("");
+  const [useAzureProcessing, setUseAzureProcessing] = useState(false);
 
   const handleFileSelect = useCallback((file: File) => {
     console.log("File selected:", file);
@@ -82,8 +90,79 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting advanced OCR processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("Starting OCR processing for:", selectedFile.name, "with model:", selectedModel);
 
+    try {
+      if (useAzureProcessing && azureCredentialsConfigured) {
+        // Use real Azure Document Intelligence
+        await processWithAzure();
+      } else {
+        // Use simulated processing
+        await processWithSimulation();
+      }
+    } catch (error) {
+      console.error("Processing error:", error);
+      toast({
+        title: "Processing failed",
+        description: error instanceof Error ? error.message : "An error occurred during document processing.",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
+    }
+  };
+
+  const processWithAzure = async () => {
+    if (!selectedFile) return;
+
+    try {
+      // Map UI model selection to Azure model IDs
+      const azureModelMap: Record<string, string> = {
+        'invoice': 'prebuilt-invoice',
+        'receipt': 'prebuilt-receipt',
+        'form': 'prebuilt-document',
+        'id': 'prebuilt-idDocument',
+        'financial': 'prebuilt-document',
+        'handwriting': 'prebuilt-read',
+        'print': 'prebuilt-read',
+        'mixed': 'prebuilt-document'
+      };
+
+      const azureModelId = azureModelMap[selectedModel] || 'prebuilt-document';
+
+      // Progress updates
+      setProgress(20);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setProgress(40);
+      
+      // Call Azure Document Intelligence
+      const result = await azureDocumentIntelligence.analyzeDocument(selectedFile, azureModelId);
+      
+      setProgress(80);
+      
+      // Send to Lovable API if endpoint is provided
+      if (lovableApiEndpoint) {
+        await azureDocumentIntelligence.sendToLovableAPI(result, lovableApiEndpoint);
+      }
+      
+      setProgress(100);
+      
+      // Format result for display
+      const formattedResult = formatAzureResult(result);
+      setOcrResult(formattedResult);
+      setCurrentStep(4);
+      
+      toast({
+        title: "Azure Document Intelligence Complete!",
+        description: `Document processed successfully with ${selectedModel} model.`
+      });
+      
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const processWithSimulation = async () => {
     const getEnhancedModelSpecificText = () => {
       const modelDescriptions = {
         invoice: "Invoice data extraction with line items, totals, and vendor information",
@@ -98,7 +177,7 @@ const TestOCR = () => {
 
       return `AZURE DOCUMENT INTELLIGENCE STUDIO RESULT
 
-Document: "${selectedFile.name}"
+Document: "${selectedFile?.name}"
 Model: ${selectedModel.toUpperCase()} PROCESSING ENGINE
 Processing Mode: ${modelDescriptions[selectedModel as keyof typeof modelDescriptions] || 'Advanced OCR processing'}
 
@@ -263,6 +342,31 @@ This enhanced result demonstrates professional-grade document intelligence capab
     });
   };
 
+  const formatAzureResult = (result: any) => {
+    return `AZURE DOCUMENT INTELLIGENCE RESULT
+
+Document: "${selectedFile?.name}"
+Status: ${result.rawData.status}
+Confidence: ${result.confidence.toFixed(1)}%
+
+=== EXTRACTED DATA ===
+
+${result.name ? `Name: ${result.name}` : ''}
+${result.date ? `Date: ${result.date}` : ''}
+${result.amount ? `Amount: ${result.amount}` : ''}
+${result.id ? `ID/Number: ${result.id}` : ''}
+
+=== PROCESSING DETAILS ===
+• Engine: Azure Document Intelligence v3.1
+• Model: ${selectedModel === 'invoice' ? 'prebuilt-invoice' : selectedModel === 'receipt' ? 'prebuilt-receipt' : selectedModel === 'form' ? 'prebuilt-document' : selectedModel === 'id' ? 'prebuilt-idDocument' : `prebuilt-${selectedModel}`}
+• API Version: 2023-07-31
+• Processing Mode: Real-time Azure Analysis
+
+${lovableApiEndpoint ? '• Data sent to Lovable API endpoint' : ''}
+
+This is a real result from Azure Document Intelligence processing your uploaded document.`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -282,6 +386,11 @@ This enhanced result demonstrates professional-grade document intelligence capab
 
           {/* Mobile-First Layout */}
           <div className="space-y-6">
+            {/* Azure Configuration - Show first if not configured */}
+            {!azureCredentialsConfigured && (
+              <AzureCredentialsForm onCredentialsSet={setAzureCredentialsConfigured} />
+            )}
+
             {/* Upload & Configuration - Full width on mobile */}
             <div className="w-full">
               {/* Enhanced Upload Card */}
@@ -347,10 +456,55 @@ This enhanced result demonstrates professional-grade document intelligence capab
               {selectedFile && (
                 <Card className="mt-4">
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl">Model Configuration</CardTitle>
-                    <CardDescription className="text-sm">Select the optimal processing model</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Processing Configuration</CardTitle>
+                    <CardDescription className="text-sm">Configure document processing options</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Azure vs Simulation Toggle */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Processing Engine</Label>
+                      <div className="flex items-center space-x-4">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="processing"
+                            checked={!useAzureProcessing}
+                            onChange={() => setUseAzureProcessing(false)}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">Simulation Mode</span>
+                        </label>
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="processing"
+                            checked={useAzureProcessing}
+                            onChange={() => setUseAzureProcessing(true)}
+                            disabled={!azureCredentialsConfigured}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">Azure Document Intelligence</span>
+                          {azureCredentialsConfigured && <Badge variant="default" className="text-xs">Live</Badge>}
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Lovable API Endpoint */}
+                    {useAzureProcessing && (
+                      <div className="space-y-2">
+                        <Label htmlFor="lovable-endpoint" className="text-sm font-medium">Lovable API Endpoint (Optional)</Label>
+                        <Input
+                          id="lovable-endpoint"
+                          type="url"
+                          placeholder="https://your-lovable-api-endpoint.com"
+                          value={lovableApiEndpoint}
+                          onChange={(e) => setLovableApiEndpoint(e.target.value)}
+                          className="text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground">Results will be sent to this endpoint after processing</p>
+                      </div>
+                    )}
+
                     <MobileModelSelector 
                       selectedModel={selectedModel} 
                       onModelChange={(model) => {
@@ -361,19 +515,19 @@ This enhanced result demonstrates professional-grade document intelligence capab
                     
                     <Button 
                       onClick={simulateOCR} 
-                      disabled={isProcessing} 
+                      disabled={isProcessing || (useAzureProcessing && !azureCredentialsConfigured)} 
                       className="w-full h-12 text-base"
                       size="lg"
                     >
                       {isProcessing ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Processing...
+                          {useAzureProcessing ? 'Processing with Azure...' : 'Processing...'}
                         </>
                       ) : (
                         <>
                           <Play className="h-4 w-4 mr-2" />
-                          Start Document Intelligence
+                          {useAzureProcessing ? 'Process with Azure DI' : 'Start Document Intelligence'}
                         </>
                       )}
                     </Button>
