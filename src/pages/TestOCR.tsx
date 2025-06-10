@@ -13,7 +13,6 @@ import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
 import { useToast } from "@/hooks/use-toast";
-
 const TestOCR = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -25,29 +24,27 @@ const TestOCR = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleFileSelect = useCallback((file: File) => {
     console.log("File selected:", file);
     setSelectedFile(file);
     setCurrentStep(2);
-    
+
     // Create preview URL
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setOcrResult("");
     setProgress(0);
-    
     toast({
       title: "File uploaded successfully",
-      description: `${file.name} is ready for advanced OCR processing.`,
+      description: `${file.name} is ready for advanced OCR processing.`
     });
   }, [toast]);
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       const file = files[0];
@@ -57,41 +54,35 @@ const TestOCR = () => {
         toast({
           title: "Invalid file type",
           description: "Please upload an image or PDF file.",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     }
   }, [handleFileSelect, toast]);
-
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
   }, []);
-
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
   }, []);
-
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       handleFileSelect(file);
     }
   };
-
   const simulateOCR = async () => {
     if (!selectedFile) return;
-    
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
     console.log("Starting advanced OCR processing for:", selectedFile.name, "with model:", selectedModel);
-    
     const getEnhancedModelSpecificText = () => {
       const modelDescriptions = {
         invoice: "Invoice data extraction with line items, totals, and vendor information",
-        receipt: "Receipt processing with merchant details, items, and tax information", 
+        receipt: "Receipt processing with merchant details, items, and tax information",
         form: "Form field extraction with structured key-value pairs",
         id: "Identity document processing with personal information extraction",
         financial: "Financial statement analysis with account details and transactions",
@@ -99,7 +90,6 @@ const TestOCR = () => {
         print: "High-precision printed text extraction with layout preservation",
         mixed: "Combined handwritten and printed text processing"
       };
-
       return `AZURE DOCUMENT INTELLIGENCE STUDIO RESULT
 
 Document: "${selectedFile.name}"
@@ -259,28 +249,22 @@ This enhanced result demonstrates professional-grade document intelligence capab
       setProgress(step);
       await new Promise(resolve => setTimeout(resolve, selectedModel === 'print' ? 120 : 180));
     }
-    
     setOcrResult(getEnhancedModelSpecificText());
     setIsProcessing(false);
     setCurrentStep(4);
-    
     toast({
       title: "Document Intelligence Complete!",
-      description: `Advanced processing completed with ${selectedModel} model.`,
+      description: `Advanced processing completed with ${selectedModel} model.`
     });
   };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
+  return <div className="min-h-screen bg-gray-50">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           {/* Enhanced Page Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Azure Document Intelligence Studio
-            </h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Raya Intelligent Document</h1>
             <p className="text-lg text-gray-600 max-w-4xl mx-auto">
               Professional document processing platform with advanced OCR, structured data extraction, 
               and comprehensive analytics. Choose from specialized models for optimal results.
@@ -304,25 +288,10 @@ This enhanced result demonstrates professional-grade document intelligence capab
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div
-                    className={`upload-area p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all ${
-                      isDragOver ? 'drag-over' : ''
-                    }`}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      accept="image/*,.pdf"
-                      onChange={handleFileInput}
-                    />
+                  <div className={`upload-area p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all ${isDragOver ? 'drag-over' : ''}`} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onClick={() => fileInputRef.current?.click()}>
+                    <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileInput} />
                     
-                    {selectedFile ? (
-                      <div className="space-y-4">
+                    {selectedFile ? <div className="space-y-4">
                         <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
                           <CheckCircle className="h-8 w-8 text-green-600" />
                         </div>
@@ -333,9 +302,7 @@ This enhanced result demonstrates professional-grade document intelligence capab
                           </p>
                         </div>
                         <Badge variant="outline" className="bg-green-50 text-green-700">Ready for processing</Badge>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
+                      </div> : <div className="space-y-4">
                         <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
                           <Upload className="h-8 w-8 text-blue-600" />
                         </div>
@@ -345,49 +312,34 @@ This enhanced result demonstrates professional-grade document intelligence capab
                           <p className="text-xs text-gray-400 mt-2">Supports JPG, PNG, PDF up to 10MB</p>
                         </div>
                         <Badge variant="secondary">Ready for upload</Badge>
-                      </div>
-                    )}
+                      </div>}
                   </div>
                 </CardContent>
               </Card>
 
               {/* Enhanced Model Configuration */}
-              {selectedFile && (
-                <Card>
+              {selectedFile && <Card>
                   <CardHeader>
                     <CardTitle>Model Configuration</CardTitle>
                     <CardDescription>Select the optimal processing model for your document</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <EnhancedModelSelector 
-                      selectedModel={selectedModel} 
-                      onModelChange={(model) => {
-                        setSelectedModel(model);
-                        setCurrentStep(3);
-                      }} 
-                    />
+                    <EnhancedModelSelector selectedModel={selectedModel} onModelChange={model => {
+                  setSelectedModel(model);
+                  setCurrentStep(3);
+                }} />
                     
-                    <Button 
-                      onClick={simulateOCR} 
-                      disabled={isProcessing}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {isProcessing ? (
-                        <>
+                    <Button onClick={simulateOCR} disabled={isProcessing} className="w-full" size="lg">
+                      {isProcessing ? <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                           Processing with {selectedModel} model...
-                        </>
-                      ) : (
-                        <>
+                        </> : <>
                           <Play className="h-4 w-4 mr-2" />
                           Start Document Intelligence
-                        </>
-                      )}
+                        </>}
                     </Button>
                     
-                    {isProcessing && (
-                      <div className="mt-4">
+                    {isProcessing && <div className="mt-4">
                         <div className="flex justify-between text-sm text-gray-600 mb-2">
                           <span>Processing document...</span>
                           <span>{progress}%</span>
@@ -396,25 +348,19 @@ This enhanced result demonstrates professional-grade document intelligence capab
                         <p className="text-xs text-gray-500 mt-1">
                           Advanced analysis in progress...
                         </p>
-                      </div>
-                    )}
+                      </div>}
                   </CardContent>
-                </Card>
-              )}
+                </Card>}
             </div>
 
             {/* Right Column - Document Viewer */}
             <div className="xl:col-span-2">
-              <DocumentViewer 
-                previewUrl={previewUrl}
-                selectedModel={selectedModel}
-              />
+              <DocumentViewer previewUrl={previewUrl} selectedModel={selectedModel} />
             </div>
           </div>
 
           {/* Enhanced Results Section */}
-          {(ocrResult || isProcessing) && (
-            <Card className="mt-8">
+          {(ocrResult || isProcessing) && <Card className="mt-8">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <BarChart3 className="h-6 w-6" />
@@ -425,15 +371,12 @@ This enhanced result demonstrates professional-grade document intelligence capab
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {isProcessing ? (
-                  <div className="flex items-center justify-center h-64">
+                {isProcessing ? <div className="flex items-center justify-center h-64">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
                       <p className="text-gray-600">Running advanced document intelligence...</p>
                     </div>
-                  </div>
-                ) : (
-                  <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
+                  </div> : <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
                     <TabsList className="grid w-full grid-cols-4">
                       <TabsTrigger value="analytics">Analytics</TabsTrigger>
                       <TabsTrigger value="structured">Structured Data</TabsTrigger>
@@ -442,26 +385,15 @@ This enhanced result demonstrates professional-grade document intelligence capab
                     </TabsList>
 
                     <TabsContent value="analytics" className="mt-6">
-                      <AnalyticsDashboard 
-                        selectedModel={selectedModel}
-                        processingTime={selectedModel === 'print' ? '1.8 seconds' : selectedModel === 'handwriting' ? '3.2 seconds' : '2.5 seconds'}
-                        overallConfidence={selectedModel === 'print' ? 99.1 : selectedModel === 'handwriting' ? 97.2 : 98.3}
-                      />
+                      <AnalyticsDashboard selectedModel={selectedModel} processingTime={selectedModel === 'print' ? '1.8 seconds' : selectedModel === 'handwriting' ? '3.2 seconds' : '2.5 seconds'} overallConfidence={selectedModel === 'print' ? 99.1 : selectedModel === 'handwriting' ? 97.2 : 98.3} />
                     </TabsContent>
 
                     <TabsContent value="structured" className="mt-6">
-                      <StructuredDataViewer 
-                        rawText={ocrResult}
-                        selectedModel={selectedModel}
-                      />
+                      <StructuredDataViewer rawText={ocrResult} selectedModel={selectedModel} />
                     </TabsContent>
 
                     <TabsContent value="advanced" className="mt-6">
-                      <AdvancedResults 
-                        rawText={ocrResult}
-                        isProcessing={isProcessing}
-                        selectedModel={selectedModel}
-                      />
+                      <AdvancedResults rawText={ocrResult} isProcessing={isProcessing} selectedModel={selectedModel} />
                     </TabsContent>
 
                     <TabsContent value="raw" className="mt-6">
@@ -471,24 +403,15 @@ This enhanced result demonstrates professional-grade document intelligence capab
                           <CardDescription>Unprocessed text extraction results</CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <textarea
-                            value={ocrResult}
-                            className="w-full h-96 bg-gray-50 border rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
-                            placeholder="Raw OCR results will appear here..."
-                            readOnly
-                          />
+                          <textarea value={ocrResult} className="w-full h-96 bg-gray-50 border rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm" placeholder="Raw OCR results will appear here..." readOnly />
                         </CardContent>
                       </Card>
                     </TabsContent>
-                  </Tabs>
-                )}
+                  </Tabs>}
               </CardContent>
-            </Card>
-          )}
+            </Card>}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default TestOCR;
