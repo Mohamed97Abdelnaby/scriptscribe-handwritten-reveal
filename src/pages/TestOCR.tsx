@@ -1,13 +1,16 @@
-
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Upload, File, Image, Play, CheckCircle } from "lucide-react";
+import { Upload, Play, CheckCircle, BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
-import ModelSelector from "@/components/ModelSelector";
 import ProcessingSteps from "@/components/ProcessingSteps";
+import EnhancedModelSelector from "@/components/EnhancedModelSelector";
+import DocumentViewer from "@/components/DocumentViewer";
+import AnalyticsDashboard from "@/components/AnalyticsDashboard";
+import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +23,7 @@ const TestOCR = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("mixed");
   const [currentStep, setCurrentStep] = useState(1);
+  const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -36,7 +40,7 @@ const TestOCR = () => {
     
     toast({
       title: "File uploaded successfully",
-      description: `${file.name} is ready for OCR processing.`,
+      description: `${file.name} is ready for advanced OCR processing.`,
     });
   }, [toast]);
 
@@ -82,70 +86,187 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting OCR processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("Starting advanced OCR processing for:", selectedFile.name, "with model:", selectedModel);
     
-    // Enhanced mock text based on selected model
-    const getModelSpecificText = () => {
-      const baseText = `ADVANCED OCR RESULT - ${selectedModel.toUpperCase()} MODEL
+    const getEnhancedModelSpecificText = () => {
+      const modelDescriptions = {
+        invoice: "Invoice data extraction with line items, totals, and vendor information",
+        receipt: "Receipt processing with merchant details, items, and tax information", 
+        form: "Form field extraction with structured key-value pairs",
+        id: "Identity document processing with personal information extraction",
+        financial: "Financial statement analysis with account details and transactions",
+        handwriting: "Handwriting recognition with advanced character analysis",
+        print: "High-precision printed text extraction with layout preservation",
+        mixed: "Combined handwritten and printed text processing"
+      };
 
-Document Analysis Complete for: "${selectedFile.name}"
+      return `AZURE DOCUMENT INTELLIGENCE STUDIO RESULT
 
-Model Configuration:
-• Processing Model: ${selectedModel === 'handwriting' ? 'Handwriting Focus (v2.1)' : selectedModel === 'print' ? 'Print Document Reader (v3.0)' : 'Mixed Document Processor (v2.5)'}
-• File Type: ${selectedFile.type.includes('image') ? 'Image Document' : 'Document File'}
-• File Size: ${(selectedFile.size / 1024).toFixed(1)} KB
-• Processing Time: ~${selectedModel === 'handwriting' ? '3.2' : selectedModel === 'print' ? '1.8' : '2.5'} seconds
+Document: "${selectedFile.name}"
+Model: ${selectedModel.toUpperCase()} PROCESSING ENGINE
+Processing Mode: ${modelDescriptions[selectedModel as keyof typeof modelDescriptions] || 'Advanced OCR processing'}
 
-EXTRACTED CONTENT:
-This is a demonstration of our advanced OCR technology processing your uploaded document with the ${selectedModel} model. 
+=== DOCUMENT ANALYSIS ===
+✓ Document loaded and preprocessed
+✓ Layout analysis completed
+✓ Text regions identified and classified
+✓ Confidence scoring applied
+✓ Structured data extraction completed
 
-Key Detection Features:
-- Text Recognition: ${selectedModel === 'handwriting' ? '99.2% accuracy for handwritten content' : selectedModel === 'print' ? '99.8% accuracy for printed text' : '98.9% accuracy for mixed content'}
-- Layout Analysis: Advanced structure detection
-- Language Support: Multi-language recognition
-- Table Extraction: Structured data preservation
-- Form Processing: Key-value pair identification
+Processing Configuration:
+• Engine: Azure Document Intelligence v3.1
+• Model: ${selectedModel === 'invoice' ? 'prebuilt-invoice' : selectedModel === 'receipt' ? 'prebuilt-receipt' : selectedModel === 'form' ? 'prebuilt-document' : selectedModel === 'id' ? 'prebuilt-idDocument' : `custom-${selectedModel}`}
+• API Version: 2023-07-31
+• Processing Mode: ${selectedModel.includes('invoice') || selectedModel.includes('receipt') || selectedModel.includes('form') ? 'Structured Extraction' : 'Text Recognition'}
 
-Sample Document Content:
-The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet and is commonly used for testing typography and OCR systems.
+=== EXTRACTION RESULTS ===
 
-INVOICE #INV-2024-001
-Date: June 10, 2025
-Customer: John Doe
-Amount: $1,234.56
+${selectedModel === 'invoice' ? `
+INVOICE DATA EXTRACTED:
+• Vendor: Acme Corporation
+• Invoice #: INV-2024-001  
+• Date: June 10, 2025
+• Due Date: July 10, 2025
+• Subtotal: $1,150.00
+• Tax: $92.00
+• Total: $1,242.00
 
-Technical Specifications:
-- Resolution: High-DPI processing
-- Color Mode: ${selectedFile.type.includes('image') ? 'RGB/Grayscale adaptive' : 'Document optimized'}
-- Noise Reduction: Applied
-- Skew Correction: Automatic
+LINE ITEMS:
+1. Professional Services - Qty: 10 hrs - Rate: $100.00 - Amount: $1,000.00
+2. Consultation Fee - Qty: 1 - Rate: $150.00 - Amount: $150.00
 
-Processing Statistics:
-• Characters Detected: 1,247
-• Words Identified: 234
-• Lines Processed: 18
-• Confidence Score: ${selectedModel === 'handwriting' ? '97.2%' : selectedModel === 'print' ? '99.1%' : '98.3%'}
-• Processing Status: Complete ✓
+VENDOR DETAILS:
+• Company: Acme Corporation
+• Address: 123 Business Ave, Suite 100, City, ST 12345
+• Phone: (555) 123-4567
+• Email: billing@acme.com
+` : selectedModel === 'receipt' ? `
+RECEIPT DATA EXTRACTED:
+• Merchant: SuperMart Grocery
+• Date: June 10, 2025
+• Time: 14:32:18
+• Receipt #: 789456123
+• Total: $47.83
+• Tax: $3.58
+• Payment Method: Credit Card ****1234
 
-This demonstration shows how your actual document content would be extracted and formatted for further processing or analysis.`;
+ITEMS PURCHASED:
+1. Organic Bananas - $3.99
+2. Whole Milk (1 Gal) - $4.29
+3. Bread (Whole Wheat) - $2.89
+4. Chicken Breast (2 lbs) - $12.98
+5. Mixed Vegetables - $6.49
+6. Orange Juice - $3.99
+7. Greek Yogurt - $5.99
+8. Apples (3 lbs) - $4.47
+` : selectedModel === 'form' ? `
+FORM DATA EXTRACTED:
 
-      return baseText;
+PERSONAL INFORMATION:
+• Full Name: John Michael Smith
+• Date of Birth: January 15, 1990
+• Social Security: XXX-XX-6789
+• Phone: (555) 987-6543
+• Email: john.smith@email.com
+
+ADDRESS INFORMATION:
+• Street: 456 Main Street, Apt 2B
+• City: Springfield
+• State: Illinois
+• ZIP Code: 62701
+• Country: United States
+
+EMPLOYMENT DETAILS:
+• Employer: Tech Solutions Inc.
+• Position: Software Engineer
+• Start Date: March 1, 2020
+• Annual Salary: $85,000
+• Department: Engineering
+` : selectedModel === 'id' ? `
+IDENTITY DOCUMENT EXTRACTED:
+
+DOCUMENT TYPE: Driver's License
+STATE: California
+LICENSE CLASS: C
+
+PERSONAL INFORMATION:
+• Name: SMITH, JOHN MICHAEL
+• Date of Birth: 01/15/1990
+• License Number: D1234567
+• Issue Date: 06/15/2023
+• Expiration: 01/15/2031
+• Sex: M
+• Height: 5'10"
+• Weight: 175 lbs
+• Eye Color: Brown
+• Hair Color: Brown
+
+ADDRESS:
+• 456 MAIN STREET
+• SPRINGFIELD, CA 62701
+
+RESTRICTIONS: NONE
+ENDORSEMENTS: NONE
+` : `
+DOCUMENT CONTENT EXTRACTED:
+
+This is a demonstration of our Azure Document Intelligence-inspired OCR platform processing your uploaded document with the ${selectedModel} model.
+
+Advanced Text Recognition Features:
+- Multi-language support with automatic detection
+- High-precision character recognition: 99.2% accuracy
+- Layout analysis with reading order detection
+- Table structure preservation and extraction
+- Form field identification and classification
+- Handwriting recognition with neural networks
+
+Sample Extracted Content:
+The quick brown fox jumps over the lazy dog. This sentence demonstrates our advanced OCR capabilities including character recognition, word spacing, and punctuation handling.
+
+TECHNICAL ANALYSIS:
+• Document Type: ${selectedFile.type.includes('pdf') ? 'PDF Document' : 'Image Document'}
+• Page Count: 1
+• Text Regions: 12 detected
+• Table Count: ${selectedModel === 'invoice' || selectedModel === 'financial' ? '2' : '0'}
+• Form Fields: ${selectedModel === 'form' ? '8' : '0'}
+• Language: English (confidence: 99.8%)
+• Text Direction: Left-to-right
+• Reading Order: Top-to-bottom
+`}
+
+PROCESSING STATISTICS:
+• Total Characters: ${Math.floor(Math.random() * 1000) + 1200}
+• Words Identified: ${Math.floor(Math.random() * 200) + 250}
+• Lines Processed: ${Math.floor(Math.random() * 20) + 15}
+• Confidence Score: ${selectedModel === 'print' ? '99.1%' : selectedModel === 'handwriting' ? '97.2%' : '98.3%'}
+• Processing Time: ${selectedModel === 'print' ? '1.8' : selectedModel === 'handwriting' ? '3.2' : '2.5'} seconds
+• Model Accuracy: ${selectedModel === 'print' ? '99.8%' : selectedModel === 'handwriting' ? '99.2%' : '98.9%'}
+
+=== QUALITY METRICS ===
+✓ Image Quality: Excellent
+✓ Text Clarity: High
+✓ Layout Complexity: Medium
+✓ Noise Level: Low
+✓ Skew Correction: Applied
+✓ Enhancement: Auto-optimized
+
+This enhanced result demonstrates professional-grade document intelligence capabilities with detailed analytics and structured data extraction.`;
     };
 
-    // Simulate processing progress with more realistic timing
-    const progressSteps = [0, 15, 35, 55, 75, 90, 100];
+    // Enhanced processing simulation
+    const progressSteps = [0, 10, 25, 40, 55, 70, 85, 95, 100];
     for (const step of progressSteps) {
       setProgress(step);
-      await new Promise(resolve => setTimeout(resolve, selectedModel === 'print' ? 150 : 250));
+      await new Promise(resolve => setTimeout(resolve, selectedModel === 'print' ? 120 : 180));
     }
     
-    setOcrResult(getModelSpecificText());
+    setOcrResult(getEnhancedModelSpecificText());
     setIsProcessing(false);
     setCurrentStep(4);
     
     toast({
-      title: "OCR Processing Complete!",
-      description: `Document processed successfully with ${selectedModel} model.`,
+      title: "Document Intelligence Complete!",
+      description: `Advanced processing completed with ${selectedModel} model.`,
     });
   };
 
@@ -154,23 +275,24 @@ This demonstration shows how your actual document content would be extracted and
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Page Header */}
+        <div className="max-w-7xl mx-auto">
+          {/* Enhanced Page Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Advanced OCR Testing Platform</h1>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Experience our Azure-inspired document intelligence system. Upload documents, select processing models, 
-              and extract text with industry-leading accuracy and detailed analytics.
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Azure Document Intelligence Studio
+            </h1>
+            <p className="text-lg text-gray-600 max-w-4xl mx-auto">
+              Professional document processing platform with advanced OCR, structured data extraction, 
+              and comprehensive analytics. Choose from specialized models for optimal results.
             </p>
           </div>
 
-          {/* Processing Steps */}
           <ProcessingSteps currentStep={currentStep} />
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Upload & Configuration Section */}
-            <div className="space-y-6">
-              {/* Upload Card */}
+          <div className="grid xl:grid-cols-3 gap-8">
+            {/* Left Column - Upload & Configuration */}
+            <div className="xl:col-span-1 space-y-6">
+              {/* Enhanced Upload Card */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -178,7 +300,7 @@ This demonstration shows how your actual document content would be extracted and
                     <span>Document Upload</span>
                   </CardTitle>
                   <CardDescription>
-                    Upload images (JPG, PNG) or PDF documents for OCR processing
+                    Upload documents for advanced OCR processing and data extraction
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -210,7 +332,7 @@ This demonstration shows how your actual document content would be extracted and
                             {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type}
                           </p>
                         </div>
-                        <Badge variant="outline" className="bg-green-50 text-green-700">File ready</Badge>
+                        <Badge variant="outline" className="bg-green-50 text-green-700">Ready for processing</Badge>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -229,15 +351,15 @@ This demonstration shows how your actual document content would be extracted and
                 </CardContent>
               </Card>
 
-              {/* Model Configuration */}
+              {/* Enhanced Model Configuration */}
               {selectedFile && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Processing Configuration</CardTitle>
-                    <CardDescription>Select the optimal model for your document type</CardDescription>
+                    <CardTitle>Model Configuration</CardTitle>
+                    <CardDescription>Select the optimal processing model for your document</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <ModelSelector 
+                    <EnhancedModelSelector 
                       selectedModel={selectedModel} 
                       onModelChange={(model) => {
                         setSelectedModel(model);
@@ -259,7 +381,7 @@ This demonstration shows how your actual document content would be extracted and
                       ) : (
                         <>
                           <Play className="h-4 w-4 mr-2" />
-                          Start OCR Processing
+                          Start Document Intelligence
                         </>
                       )}
                     </Button>
@@ -272,7 +394,7 @@ This demonstration shows how your actual document content would be extracted and
                         </div>
                         <Progress value={progress} className="w-full" />
                         <p className="text-xs text-gray-500 mt-1">
-                          Estimated time: ~{selectedModel === 'print' ? '2' : '3'} seconds
+                          Advanced analysis in progress...
                         </p>
                       </div>
                     )}
@@ -281,53 +403,85 @@ This demonstration shows how your actual document content would be extracted and
               )}
             </div>
 
-            {/* Preview Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Image className="h-6 w-6" />
-                  <span>Document Preview</span>
-                </CardTitle>
-                <CardDescription>
-                  Preview of your uploaded document
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {previewUrl ? (
-                  <div className="bg-gray-100 rounded-lg p-4 min-h-64 flex items-center justify-center">
-                    <img 
-                      src={previewUrl} 
-                      alt="Document preview" 
-                      className="max-w-full max-h-64 object-contain rounded shadow-sm"
-                    />
-                  </div>
-                ) : (
-                  <div className="bg-gray-100 rounded-lg p-8 min-h-64 flex items-center justify-center">
-                    <div className="text-center text-gray-500">
-                      <File className="h-12 w-12 mx-auto mb-2" />
-                      <p>Upload a document to see preview</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Right Column - Document Viewer */}
+            <div className="xl:col-span-2">
+              <DocumentViewer 
+                previewUrl={previewUrl}
+                selectedModel={selectedModel}
+              />
+            </div>
           </div>
 
-          {/* Advanced Results Section */}
+          {/* Enhanced Results Section */}
           {(ocrResult || isProcessing) && (
             <Card className="mt-8">
               <CardHeader>
-                <CardTitle>OCR Results & Analytics</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-6 w-6" />
+                  <span>Document Intelligence Results</span>
+                </CardTitle>
                 <CardDescription>
-                  Comprehensive analysis and extracted content from your document
+                  Comprehensive analysis, structured data extraction, and processing analytics
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AdvancedResults 
-                  rawText={ocrResult}
-                  isProcessing={isProcessing}
-                  selectedModel={selectedModel}
-                />
+                {isProcessing ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                      <p className="text-gray-600">Running advanced document intelligence...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
+                    <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                      <TabsTrigger value="structured">Structured Data</TabsTrigger>
+                      <TabsTrigger value="advanced">Advanced Results</TabsTrigger>
+                      <TabsTrigger value="raw">Raw Output</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="analytics" className="mt-6">
+                      <AnalyticsDashboard 
+                        selectedModel={selectedModel}
+                        processingTime={selectedModel === 'print' ? '1.8 seconds' : selectedModel === 'handwriting' ? '3.2 seconds' : '2.5 seconds'}
+                        overallConfidence={selectedModel === 'print' ? 99.1 : selectedModel === 'handwriting' ? 97.2 : 98.3}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="structured" className="mt-6">
+                      <StructuredDataViewer 
+                        rawText={ocrResult}
+                        selectedModel={selectedModel}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="advanced" className="mt-6">
+                      <AdvancedResults 
+                        rawText={ocrResult}
+                        isProcessing={isProcessing}
+                        selectedModel={selectedModel}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="raw" className="mt-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Raw OCR Output</CardTitle>
+                          <CardDescription>Unprocessed text extraction results</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <textarea
+                            value={ocrResult}
+                            className="w-full h-96 bg-gray-50 border rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                            placeholder="Raw OCR results will appear here..."
+                            readOnly
+                          />
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                )}
               </CardContent>
             </Card>
           )}

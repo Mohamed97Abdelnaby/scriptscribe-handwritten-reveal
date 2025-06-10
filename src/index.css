@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
+/* Azure Document Intelligence inspired design system */
 
 @layer base {
   :root {
@@ -16,7 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221.2 83.2% 53.3%;
+    /* Azure-inspired primary color */
+    --primary: 210 100% 50%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -33,7 +34,7 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 210 100% 50%;
 
     --radius: 0.5rem;
 
@@ -46,11 +47,16 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* OCR specific colors */
-    --ocr-blue: 221.2 83.2% 53.3%;
-    --ocr-blue-light: 221.2 83.2% 93%;
-    --ocr-success: 142.1 76.2% 36.3%;
-    --ocr-warning: 45.4 93.4% 47.5%;
+    /* Azure Document Intelligence specific colors */
+    --azure-blue: 210 100% 50%;
+    --azure-blue-light: 210 100% 95%;
+    --azure-blue-dark: 210 100% 25%;
+    --azure-success: 142.1 76.2% 36.3%;
+    --azure-warning: 45.4 93.4% 47.5%;
+    --azure-error: 0 84.2% 60.2%;
+    --confidence-high: 142.1 76.2% 36.3%;
+    --confidence-medium: 45.4 93.4% 47.5%;
+    --confidence-low: 0 84.2% 60.2%;
   }
 
   .dark {
@@ -63,7 +69,7 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 210 100% 50%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -103,17 +109,17 @@
 }
 
 @layer components {
-  .ocr-gradient {
-    background: linear-gradient(135deg, hsl(var(--ocr-blue)) 0%, hsl(var(--primary)) 100%);
+  .azure-gradient {
+    background: linear-gradient(135deg, hsl(var(--azure-blue)) 0%, hsl(var(--azure-blue-dark)) 100%);
   }
   
-  .ocr-card-hover {
+  .azure-card-hover {
     transition: all 0.3s ease;
   }
   
-  .ocr-card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  .azure-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
   }
 
   .upload-area {
@@ -122,7 +128,52 @@
   }
   
   .upload-area.drag-over {
-    border-color: hsl(var(--primary));
-    background-color: hsl(var(--ocr-blue-light));
+    border-color: hsl(var(--azure-blue));
+    background-color: hsl(var(--azure-blue-light));
   }
+
+  .confidence-high {
+    color: hsl(var(--confidence-high));
+  }
+
+  .confidence-medium {
+    color: hsl(var(--confidence-medium));
+  }
+
+  .confidence-low {
+    color: hsl(var(--confidence-low));
+  }
+
+  .document-region {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .document-region:hover {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+
+  .processing-animation {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--azure-blue));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--azure-blue-dark));
 }
