@@ -135,9 +135,7 @@ const Index = () => {
             <p className="text-gray-400 mb-4">
               Transforming documents with cutting-edge OCR technology
             </p>
-            <p className="text-sm text-gray-500">
-              © 2024 DocuScan AI. All rights reserved.
-            </p>
+            <p className="text-sm text-gray-500">© 2024 Raya Intelligent Document. All rights reserved.</p>
           </div>
         </div>
       </footer>
