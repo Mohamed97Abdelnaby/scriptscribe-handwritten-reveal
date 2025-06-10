@@ -130,7 +130,7 @@ const Index = () => {
               <div className="w-8 h-8 ocr-gradient rounded-lg flex items-center justify-center">
                 <FileText className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold">DocuScan AI</span>
+              <span className="text-xl font-bold">Raya Intelligent Document</span>
             </div>
             <p className="text-gray-400 mb-4">
               Transforming documents with cutting-edge OCR technology
