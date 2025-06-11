@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -69,6 +68,9 @@ const StructuredDataViewer = ({ rawText, selectedModel, structuredData }: Struct
 
   const displayData = getStructuredData();
 
+  // Create cleaned paragraph content
+  const paragraphContent = rawText.replace(/\n/g, " ").replace(/\r/g, " ").trim();
+
   const copyToClipboard = (content: string, type: string) => {
     navigator.clipboard.writeText(content);
     toast({
@@ -119,6 +121,16 @@ const StructuredDataViewer = ({ rawText, selectedModel, structuredData }: Struct
           <FileJson className="h-4 w-4 mr-1" />
           Download JSON
         </Button>
+        {paragraphContent && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => copyToClipboard(paragraphContent, "Paragraph content")}
+          >
+            <Copy className="h-4 w-4 mr-1" />
+            Copy Paragraph
+          </Button>
+        )}
         {structuredData && (
           <Badge variant="default" className="bg-green-100 text-green-800">
             Real Azure Data
@@ -127,12 +139,39 @@ const StructuredDataViewer = ({ rawText, selectedModel, structuredData }: Struct
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="hierarchy">Document Hierarchy</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
+          <TabsTrigger value="paragraph">Paragraph</TabsTrigger>
           <TabsTrigger value="tables">Tables</TabsTrigger>
-          <TabsTrigger value="keyvalue">Key-Value Pairs</TabsTrigger>
+          <TabsTrigger value="keyvalue">Key-Value</TabsTrigger>
           <TabsTrigger value="coordinates">Coordinates</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="paragraph" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Document Content as Paragraph</CardTitle>
+              <CardDescription>
+                Complete document text presented as a single paragraph with line breaks removed
+                {structuredData && " (from Azure Document Intelligence)"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {paragraphContent ? (
+                <div className="p-4 bg-gray-50 rounded border">
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {paragraphContent}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No content available</p>
+                  <p className="text-sm">Process a document to see the paragraph view</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="hierarchy" className="mt-4">
           <Card>
