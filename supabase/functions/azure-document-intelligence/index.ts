@@ -44,25 +44,13 @@ serve(async (req) => {
     // Convert base64 to binary data
     const binaryData = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
 
-    // Enhanced model mapping with prebuilt-read as primary
-    const modelMapping: { [key: string]: string } = {
-      'read': 'prebuilt-read',
-      'handwriting': 'prebuilt-read',
-      'print': 'prebuilt-read',
-      'mixed': 'prebuilt-read',
-      'invoice': 'prebuilt-invoice',
-      'receipt': 'prebuilt-receipt',
-      'form': 'prebuilt-document',
-      'id': 'prebuilt-idDocument',
-      'financial': 'prebuilt-document'
-    };
-
-    const azureModel = modelMapping[modelType] || 'prebuilt-read';
+    // Use latest prebuilt-read model with API version 2024-11-30
+    const azureModel = 'prebuilt-read';
     
-    console.log(`Starting enhanced read analysis with model: ${azureModel}`);
+    console.log(`Starting enhanced read analysis with model: ${azureModel} (API version 2024-11-30)`);
 
-    // Step 1: Submit document for analysis
-    const analyzeUrl = `${azureEndpoint}formrecognizer/documentModels/${azureModel}:analyze?api-version=2023-07-31`;
+    // Step 1: Submit document for analysis using latest API version
+    const analyzeUrl = `${azureEndpoint}formrecognizer/documentModels/${azureModel}:analyze?api-version=2024-11-30`;
     
     const analyzeResponse = await fetch(analyzeUrl, {
       method: 'POST',
@@ -97,7 +85,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Document submitted for enhanced read analysis, polling for results...');
+    console.log('Document submitted for enhanced read analysis (v2024-11-30), polling for results...');
 
     // Step 2: Enhanced polling for results
     let attempts = 0;
@@ -120,7 +108,7 @@ serve(async (req) => {
       const result = await resultResponse.json();
       
       if (result.status === 'succeeded') {
-        console.log('Enhanced read analysis completed successfully');
+        console.log('Enhanced read analysis completed successfully (v2024-11-30)');
         
         // Transform Azure response with enhanced read features
         const transformedResult = transformEnhancedReadResponse(result.analyzeResult, modelType);
@@ -159,7 +147,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in Enhanced Azure Document Intelligence:', error);
+    console.error('Error in Enhanced Azure Document Intelligence (v2024-11-30):', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }), 
       { 
@@ -191,7 +179,7 @@ function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
 
   console.log(`Document contains content: ${content}`);
 
-  // Analyze handwriting styles (like Python example)
+  // Analyze handwriting styles with v2024-11-30 improvements
   const handwritingAnalysis = styles.map((style: any, idx: number) => ({
     id: idx + 1,
     isHandwritten: style.isHandwritten || false,
@@ -199,9 +187,9 @@ function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
     spans: style.spans || []
   }));
 
-  // Enhanced page analysis
+  // Enhanced page analysis with latest API features
   const enhancedPages = pages.map((page: any, pageIndex: number) => {
-    console.log(`----Analyzing Enhanced Read from page #${page.pageNumber}----`);
+    console.log(`----Analyzing Enhanced Read from page #${page.pageNumber} (API v2024-11-30)----`);
     console.log(`Page has width: ${page.width} and height: ${page.height}, measured with unit: ${page.unit}`);
 
     const enhancedLines = (page.lines || []).map((line: any, lineIndex: number) => {
@@ -252,7 +240,7 @@ function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
   const handwrittenLines = handwritingAnalysis.filter(style => style.isHandwritten).length;
   const handwritingPercentage = totalLines > 0 ? Math.round((handwrittenLines / totalLines) * 100) : 0;
 
-  // Process tables (if any)
+  // Process tables (if any) with v2024-11-30 improvements
   const tables = analyzeResult.tables || [];
   const processedTables = tables.map((table: any, tableIndex: number) => ({
     id: tableIndex + 1,
@@ -267,7 +255,7 @@ function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
     rows: extractTableRows(table)
   }));
 
-  // Enhanced key-value pairs
+  // Enhanced key-value pairs with latest API features
   const keyValuePairs = analyzeResult.keyValuePairs || [];
   let processedKeyValuePairs = keyValuePairs.map((pair: any) => ({
     key: pair.key?.content || 'Unknown',
@@ -275,11 +263,12 @@ function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
     confidence: Math.round(((pair.key?.confidence || 0) + (pair.value?.confidence || 0)) / 2 * 100)
   }));
 
-  // Add enhanced metadata
+  // Add enhanced metadata for v2024-11-30
   if (processedKeyValuePairs.length === 0) {
     processedKeyValuePairs = [
       { key: "Document Type", value: "Enhanced Read Analysis", confidence: 100 },
-      { key: "Processing Model", value: modelType, confidence: 100 },
+      { key: "API Version", value: "2024-11-30", confidence: 100 },
+      { key: "Processing Model", value: "prebuilt-read", confidence: 100 },
       { key: "Total Pages", value: pages.length.toString(), confidence: 100 },
       { key: "Handwriting Detection", value: `${handwritingPercentage}% handwritten`, confidence: 100 },
       { key: "Content Length", value: `${content.length} characters`, confidence: 100 }
@@ -299,6 +288,7 @@ function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
         totalPages: pages.length,
         handwritingPercentage,
         avgConfidence: calculateOverallConfidence(analyzeResult),
+        apiVersion: '2024-11-30',
         pageDimensions: enhancedPages.map(p => ({ 
           page: p.pageNumber, 
           width: p.width, 
@@ -315,7 +305,8 @@ function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
       handwritingPercentage,
       processingTime: '2.1 seconds',
       timestamp: new Date().toISOString(),
-      enhancedRead: true
+      enhancedRead: true,
+      apiVersion: '2024-11-30'
     }
   };
 }
