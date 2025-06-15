@@ -41,7 +41,7 @@ const TestOCR = () => {
     setProgress(0);
     toast({
       title: "File uploaded successfully",
-      description: `${file.name} is ready for prebuilt-read processing.`
+      description: `${file.name} is ready for Raya Document Intelligence processing.`
     });
   }, [toast]);
 
@@ -86,7 +86,7 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Azure Document Intelligence prebuilt-read processing for:", selectedFile.name);
+    console.log("Starting Raya Document Intelligence processing for:", selectedFile.name);
 
     try {
       // Convert file to base64
@@ -125,10 +125,10 @@ const TestOCR = () => {
       setProgress(100);
 
       if (error) {
-        console.error('Azure processing error:', error);
+        console.error('Raya processing error:', error);
         toast({
           title: "Processing Failed",
-          description: "Failed to process document with Azure Document Intelligence.",
+          description: "Failed to process document with Raya Document Intelligence.",
           variant: "destructive"
         });
         setIsProcessing(false);
@@ -147,7 +147,7 @@ const TestOCR = () => {
         
         toast({
           title: "Document Intelligence Complete!",
-          description: `Successfully processed with Azure prebuilt-read model${handwritingInfo}.`
+          description: `Successfully processed with Raya Document Intelligence${handwritingInfo}.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
@@ -174,15 +174,15 @@ const TestOCR = () => {
           {/* Page Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">
-              Azure Document Intelligence
+              Raya Document Intelligence
             </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Advanced document processing with Azure's prebuilt-read model, featuring handwriting detection, 
+              Advanced document processing with Raya's intelligent OCR technology, featuring handwriting detection, 
               polygon bounding boxes, and enhanced text analysis capabilities.
             </p>
             <div className="mt-4">
               <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                Prebuilt-Read Model
+                Intelligent OCR Model
               </Badge>
             </div>
           </div>
@@ -200,7 +200,7 @@ const TestOCR = () => {
                     <span>Document Upload</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Upload documents for Azure prebuilt-read processing
+                    Upload documents for Raya Document Intelligence processing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -261,7 +261,7 @@ const TestOCR = () => {
                         {isProcessing ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Processing with Prebuilt-Read...
+                            Processing with Raya Intelligence...
                           </>
                         ) : (
                           <>
@@ -274,7 +274,7 @@ const TestOCR = () => {
                       {isProcessing && (
                         <div className="mt-4">
                           <div className="flex justify-between text-sm text-gray-600 mb-2">
-                            <span>Azure prebuilt-read analysis...</span>
+                            <span>Raya Document Intelligence analysis...</span>
                             <span>{progress}%</span>
                           </div>
                           <Progress value={progress} className="w-full" />
@@ -324,7 +324,7 @@ const TestOCR = () => {
                   <span>Document Intelligence Results</span>
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Real-time analysis and data extraction from Azure prebuilt-read
+                  Real-time analysis and data extraction from Raya Document Intelligence
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -332,7 +332,7 @@ const TestOCR = () => {
                   <div className="flex items-center justify-center h-32 sm:h-64">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                      <p className="text-gray-600 text-sm">Running Azure Document Intelligence...</p>
+                      <p className="text-gray-600 text-sm">Running Raya Document Intelligence...</p>
                     </div>
                   </div>
                 ) : (
@@ -368,13 +368,13 @@ const TestOCR = () => {
                       <Card>
                         <CardHeader className="pb-4">
                           <CardTitle className="text-lg">Raw OCR Output</CardTitle>
-                          <CardDescription className="text-sm">Unprocessed text extraction results from Azure</CardDescription>
+                          <CardDescription className="text-sm">Unprocessed text extraction results from Raya Intelligence</CardDescription>
                         </CardHeader>
                         <CardContent>
                           <textarea 
                             value={ocrResult} 
                             className="w-full h-64 sm:h-96 bg-gray-50 border rounded-lg p-3 sm:p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-xs sm:text-sm" 
-                            placeholder="Azure OCR results will appear here..." 
+                            placeholder="Raya OCR results will appear here..." 
                             readOnly 
                           />
                         </CardContent>
