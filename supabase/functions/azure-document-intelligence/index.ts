@@ -49,8 +49,8 @@ serve(async (req) => {
     
     console.log(`Starting enhanced read analysis with model: ${azureModel} (API version 2024-11-30)`);
 
-    // Step 1: Submit document for analysis using latest API version
-    const analyzeUrl = `${azureEndpoint}formrecognizer/documentModels/${azureModel}:analyze?api-version=2024-11-30`;
+    // Step 1: Submit document for analysis using correct API endpoint structure
+    const analyzeUrl = `${azureEndpoint}documentintelligence/documentModels/${azureModel}:analyze?_overload=analyzeDocument&api-version=2024-11-30`;
     
     const analyzeResponse = await fetch(analyzeUrl, {
       method: 'POST',
