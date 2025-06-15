@@ -14,8 +14,6 @@ import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import LanguageSelector from "@/components/LanguageSelector";
-import ArabicTextRenderer from "@/components/ArabicTextRenderer";
 
 const TestOCR = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -29,8 +27,6 @@ const TestOCR = () => {
   const [selectedModel, setSelectedModel] = useState<string>("mixed");
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
-  const [selectedLanguage, setSelectedLanguage] = useState<string>("auto");
-  const [detectedLanguage, setDetectedLanguage] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -39,14 +35,13 @@ const TestOCR = () => {
     setSelectedFile(file);
     setCurrentStep(2);
 
-    // Create preview URL preserving original quality
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setOcrResult("");
     setProgress(0);
     toast({
       title: "File uploaded successfully",
-      description: `${file.name} is ready for processing at original quality.`
+      description: `${file.name} is ready for advanced OCR processing.`
     });
   }, [toast]);
 
@@ -91,20 +86,19 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel, "and language:", selectedLanguage);
+    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
 
     try {
-      // Convert file to base64 without compression
+      // Convert file to base64
       const reader = new FileReader();
       const fileData = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
           const result = reader.result as string;
-          // Remove data URL prefix to get pure base64
+          // Remove data URL prefix (data:image/jpeg;base64,)
           const base64Data = result.split(',')[1];
           resolve(base64Data);
         };
         reader.onerror = reject;
-        // Use readAsDataURL to preserve original file format and quality
         reader.readAsDataURL(selectedFile);
       });
 
@@ -119,13 +113,11 @@ const TestOCR = () => {
         });
       }, 1000);
 
-      // Call Azure Document Intelligence with language parameter
+      // Call Azure Document Intelligence via Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
         body: {
           fileData,
-          modelType: selectedModel,
-          preserveOriginalQuality: true,
-          language: selectedLanguage !== "auto" ? selectedLanguage : undefined
+          modelType: selectedModel
         }
       });
 
@@ -147,12 +139,11 @@ const TestOCR = () => {
         setOcrResult(data.data.rawText);
         setStructuredData(data.data.structuredData);
         setProcessingMetadata(data.data.metadata);
-        setDetectedLanguage(data.data.metadata?.detectedLanguage || "");
         setCurrentStep(4);
         
         toast({
           title: "Document Intelligence Complete!",
-          description: `Successfully processed with Azure using ${selectedModel} model${selectedLanguage !== "auto" ? ` for ${selectedLanguage} language` : ""}.`
+          description: `Successfully processed with Azure using ${selectedModel} model.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
@@ -170,7 +161,6 @@ const TestOCR = () => {
     }
   };
 
-  
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -181,8 +171,8 @@ const TestOCR = () => {
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Raya Intelligent Document</h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Professional document processing platform with Azure Document Intelligence, preserving original document quality 
-              for maximum accuracy with enhanced Arabic language support.
+              Professional document processing platform with Azure Document Intelligence, structured data extraction, 
+              and comprehensive analytics.
             </p>
           </div>
 
@@ -200,7 +190,7 @@ const TestOCR = () => {
                     <span>Document Upload</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Upload documents at original quality for Azure Document Intelligence processing
+                    Upload documents for Azure Document Intelligence processing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -229,7 +219,7 @@ const TestOCR = () => {
                         <div>
                           <p className="font-semibold text-gray-900 text-sm sm:text-base break-all">{selectedFile.name}</p>
                           <p className="text-xs sm:text-sm text-gray-500">
-                            {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type} • Original Quality
+                            {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type}
                           </p>
                         </div>
                         <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">Ready for processing</Badge>
@@ -242,7 +232,7 @@ const TestOCR = () => {
                         <div>
                           <p className="text-base sm:text-lg font-semibold text-gray-900">Drop your document here</p>
                           <p className="text-sm text-gray-500">or tap to browse files</p>
-                          <p className="text-xs text-gray-400 mt-1">Supports JPG, PNG, PDF up to 10MB • Original quality preserved</p>
+                          <p className="text-xs text-gray-400 mt-1">Supports JPG, PNG, PDF up to 10MB</p>
                         </div>
                         <Badge variant="secondary" className="text-xs">Ready for upload</Badge>
                       </div>
@@ -251,28 +241,21 @@ const TestOCR = () => {
                 </CardContent>
               </Card>
 
-              {/* Enhanced Model and Language Configuration */}
+              {/* Enhanced Model Configuration */}
               {selectedFile && (
                 <Card className="mt-4">
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl">Processing Configuration</CardTitle>
-                    <CardDescription className="text-sm">Select optimal Azure model and language settings</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Model Configuration</CardTitle>
+                    <CardDescription className="text-sm">Select the optimal Azure processing model</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <MobileModelSelector 
-                        selectedModel={selectedModel} 
-                        onModelChange={(model) => {
-                          setSelectedModel(model);
-                          setCurrentStep(3);
-                        }} 
-                      />
-                      
-                      <LanguageSelector 
-                        selectedLanguage={selectedLanguage}
-                        onLanguageChange={setSelectedLanguage}
-                      />
-                    </div>
+                    <MobileModelSelector 
+                      selectedModel={selectedModel} 
+                      onModelChange={(model) => {
+                        setSelectedModel(model);
+                        setCurrentStep(3);
+                      }} 
+                    />
                     
                     <Button 
                       onClick={processWithAzure} 
@@ -300,9 +283,7 @@ const TestOCR = () => {
                           <span>{progress}%</span>
                         </div>
                         <Progress value={progress} className="w-full" />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Processing at original quality{selectedLanguage !== "auto" ? ` with ${selectedLanguage} language optimization` : ""}...
-                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Advanced analysis in progress...</p>
                       </div>
                     )}
                   </CardContent>
@@ -315,14 +296,13 @@ const TestOCR = () => {
               <div className="w-full">
                 <MobileDocumentViewer 
                   previewUrl={previewUrl} 
-                  selectedModel={selectedModel}
-                  preserveOriginalQuality={true}
+                  selectedModel={selectedModel} 
                 />
               </div>
             )}
           </div>
 
-          {/* Enhanced Results Section with Arabic Support */}
+          {/* Enhanced Results Section */}
           {(ocrResult || isProcessing) && (
             <Card className="mt-6 sm:mt-8">
               <CardHeader className="pb-4">
@@ -331,7 +311,7 @@ const TestOCR = () => {
                   <span>Azure Document Intelligence Results</span>
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Real-time analysis and data extraction from Azure with enhanced Arabic language support
+                  Real-time analysis and data extraction from Azure
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -344,9 +324,8 @@ const TestOCR = () => {
                   </div>
                 ) : (
                   <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
-                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
                       <TabsTrigger value="analytics" className="text-xs sm:text-sm p-2 sm:p-3">Analytics</TabsTrigger>
-                      <TabsTrigger value="arabic" className="text-xs sm:text-sm p-2 sm:p-3">Arabic View</TabsTrigger>
                       <TabsTrigger value="structured" className="text-xs sm:text-sm p-2 sm:p-3">Data</TabsTrigger>
                       <TabsTrigger value="advanced" className="text-xs sm:text-sm p-2 sm:p-3 hidden sm:flex">Advanced</TabsTrigger>
                       <TabsTrigger value="raw" className="text-xs sm:text-sm p-2 sm:p-3">Raw</TabsTrigger>
@@ -357,14 +336,6 @@ const TestOCR = () => {
                         selectedModel={selectedModel} 
                         processingTime={processingMetadata?.processingTime || '2.5 seconds'} 
                         overallConfidence={processingMetadata?.confidence || 98.3} 
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="arabic" className="mt-4 sm:mt-6">
-                      <ArabicTextRenderer 
-                        text={ocrResult}
-                        confidence={processingMetadata?.confidence}
-                        detectedLanguage={detectedLanguage}
                       />
                     </TabsContent>
 

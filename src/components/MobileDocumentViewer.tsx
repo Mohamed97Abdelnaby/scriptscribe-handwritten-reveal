@@ -26,15 +26,9 @@ interface MobileDocumentViewerProps {
   previewUrl: string;
   boundingBoxes?: BoundingBox[];
   selectedModel: string;
-  preserveOriginalQuality?: boolean;
 }
 
-const MobileDocumentViewer = ({ 
-  previewUrl, 
-  boundingBoxes = [], 
-  selectedModel,
-  preserveOriginalQuality = false 
-}: MobileDocumentViewerProps) => {
+const MobileDocumentViewer = ({ previewUrl, boundingBoxes = [], selectedModel }: MobileDocumentViewerProps) => {
   const [zoom, setZoom] = useState(100);
   const [selectedBox, setSelectedBox] = useState<string | null>(null);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(false);
@@ -96,9 +90,6 @@ const MobileDocumentViewer = ({
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             <CardTitle className="text-base sm:text-lg truncate">Document Viewer</CardTitle>
             <Badge variant="outline" className="text-xs">{selectedModel}</Badge>
-            {preserveOriginalQuality && (
-              <Badge variant="secondary" className="text-xs bg-green-50 text-green-700">Original Quality</Badge>
-            )}
           </div>
           
           {/* Mobile: Dropdown menu for controls */}
@@ -169,12 +160,10 @@ const MobileDocumentViewer = ({
               <img 
                 src={previewUrl} 
                 alt="Document preview" 
-                className="w-full h-full transition-transform duration-200"
+                className="w-full h-full object-contain transition-transform duration-200"
                 style={{ 
                   transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                  transformOrigin: 'center',
-                  objectFit: preserveOriginalQuality ? 'contain' : 'contain',
-                  imageRendering: preserveOriginalQuality ? 'crisp-edges' : 'auto'
+                  transformOrigin: 'center'
                 }}
               />
               
@@ -212,7 +201,7 @@ const MobileDocumentViewer = ({
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
                 <Fullscreen className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Upload a document to view at original quality</p>
+                <p className="text-sm">Upload a document to view</p>
               </div>
             </div>
           )}
