@@ -48,10 +48,13 @@ serve(async (req) => {
     const azureModel = 'prebuilt-read';
     
     console.log(`Starting enhanced read analysis with model: ${azureModel} (API version 2024-11-30)`);
+    console.log(`Azure endpoint: ${azureEndpoint}`);
 
     // Step 1: Submit document for analysis using correct API endpoint structure
     const analyzeUrl = `${azureEndpoint}documentintelligence/documentModels/${azureModel}:analyze?_overload=analyzeDocument&api-version=2024-11-30`;
     
+    console.log(`Analysis URL: ${analyzeUrl}`);
+
     const analyzeResponse = await fetch(analyzeUrl, {
       method: 'POST',
       headers: {
@@ -61,11 +64,25 @@ serve(async (req) => {
       body: binaryData,
     });
 
+    console.log(`Azure API Response Status: ${analyzeResponse.status}`);
+    console.log(`Azure API Response Headers:`, Object.fromEntries(analyzeResponse.headers.entries()));
+
     if (!analyzeResponse.ok) {
       const errorText = await analyzeResponse.text();
-      console.error('Azure API Error:', errorText);
+      console.error('Azure API Error Details:', errorText);
+      console.error('Request URL was:', analyzeUrl);
+      console.error('Request headers were:', {
+        'Ocp-Apim-Subscription-Key': azureKey ? '[SET]' : '[NOT SET]',
+        'Content-Type': 'application/octet-stream'
+      });
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to analyze document', details: errorText }), 
+        JSON.stringify({ 
+          error: 'Failed to analyze document', 
+          details: errorText,
+          requestUrl: analyzeUrl,
+          status: analyzeResponse.status
+        }), 
         { 
           status: analyzeResponse.status, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
