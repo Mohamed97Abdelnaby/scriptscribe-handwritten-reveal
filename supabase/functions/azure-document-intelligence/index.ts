@@ -44,21 +44,22 @@ serve(async (req) => {
     // Convert base64 to binary data
     const binaryData = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
 
-    // Map model types to Azure prebuilt models
+    // Enhanced model mapping with prebuilt-read as primary
     const modelMapping: { [key: string]: string } = {
+      'read': 'prebuilt-read',
+      'handwriting': 'prebuilt-read',
+      'print': 'prebuilt-read',
+      'mixed': 'prebuilt-read',
       'invoice': 'prebuilt-invoice',
       'receipt': 'prebuilt-receipt',
       'form': 'prebuilt-document',
       'id': 'prebuilt-idDocument',
-      'financial': 'prebuilt-document',
-      'handwriting': 'prebuilt-read',
-      'print': 'prebuilt-read',
-      'mixed': 'prebuilt-document'
+      'financial': 'prebuilt-document'
     };
 
-    const azureModel = modelMapping[modelType] || 'prebuilt-document';
+    const azureModel = modelMapping[modelType] || 'prebuilt-read';
     
-    console.log(`Starting analysis with model: ${azureModel}`);
+    console.log(`Starting enhanced read analysis with model: ${azureModel}`);
 
     // Step 1: Submit document for analysis
     const analyzeUrl = `${azureEndpoint}formrecognizer/documentModels/${azureModel}:analyze?api-version=2023-07-31`;
@@ -96,9 +97,9 @@ serve(async (req) => {
       );
     }
 
-    console.log('Document submitted, polling for results...');
+    console.log('Document submitted for enhanced read analysis, polling for results...');
 
-    // Step 2: Poll for results
+    // Step 2: Enhanced polling for results
     let attempts = 0;
     const maxAttempts = 30;
     
@@ -119,10 +120,10 @@ serve(async (req) => {
       const result = await resultResponse.json();
       
       if (result.status === 'succeeded') {
-        console.log('Analysis completed successfully');
+        console.log('Enhanced read analysis completed successfully');
         
-        // Transform Azure response to our expected format
-        const transformedResult = transformAzureResponse(result.analyzeResult, modelType);
+        // Transform Azure response with enhanced read features
+        const transformedResult = transformEnhancedReadResponse(result.analyzeResult, modelType);
         
         return new Response(
           JSON.stringify({ 
@@ -134,7 +135,7 @@ serve(async (req) => {
           }
         );
       } else if (result.status === 'failed') {
-        console.error('Analysis failed:', result.error);
+        console.error('Enhanced read analysis failed:', result.error);
         return new Response(
           JSON.stringify({ error: 'Document analysis failed', details: result.error }), 
           { 
@@ -158,7 +159,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in Azure Document Intelligence:', error);
+    console.error('Error in Enhanced Azure Document Intelligence:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }), 
       { 
@@ -169,49 +170,90 @@ serve(async (req) => {
   }
 });
 
-function transformAzureResponse(analyzeResult: any, modelType: string) {
-  const pages = analyzeResult.pages || [];
-  const tables = analyzeResult.tables || [];
-  const keyValuePairs = analyzeResult.keyValuePairs || [];
-  const documents = analyzeResult.documents || [];
-
-  // Extract raw text
-  let rawText = '';
-  if (pages.length > 0) {
-    rawText = pages.map((page: any) => 
-      page.lines?.map((line: any) => line.content).join('\n') || ''
-    ).join('\n\n');
+function formatBoundingBox(polygon: number[]): string {
+  if (!polygon || polygon.length === 0) {
+    return "N/A";
   }
+  
+  // Reshape array into coordinate pairs
+  const coordinates: [number, number][] = [];
+  for (let i = 0; i < polygon.length; i += 2) {
+    coordinates.push([polygon[i], polygon[i + 1]]);
+  }
+  
+  return coordinates.map(([x, y]) => `[${x.toFixed(1)}, ${y.toFixed(1)}]`).join(', ');
+}
 
-  // Process hierarchy data
-  const hierarchy = {
-    pages: pages.map((page: any, pageIndex: number) => ({
-      pageNumber: pageIndex + 1,
-      lines: (page.lines || []).map((line: any, lineIndex: number) => ({
+function transformEnhancedReadResponse(analyzeResult: any, modelType: string) {
+  const pages = analyzeResult.pages || [];
+  const styles = analyzeResult.styles || [];
+  const content = analyzeResult.content || '';
+
+  console.log(`Document contains content: ${content}`);
+
+  // Analyze handwriting styles (like Python example)
+  const handwritingAnalysis = styles.map((style: any, idx: number) => ({
+    id: idx + 1,
+    isHandwritten: style.isHandwritten || false,
+    confidence: Math.round((style.confidence || 0) * 100),
+    spans: style.spans || []
+  }));
+
+  // Enhanced page analysis
+  const enhancedPages = pages.map((page: any, pageIndex: number) => {
+    console.log(`----Analyzing Enhanced Read from page #${page.pageNumber}----`);
+    console.log(`Page has width: ${page.width} and height: ${page.height}, measured with unit: ${page.unit}`);
+
+    const enhancedLines = (page.lines || []).map((line: any, lineIndex: number) => {
+      const boundingBoxFormatted = formatBoundingBox(line.polygon);
+      console.log(`...Line # ${lineIndex} has text content '${line.content}' within bounding box '${boundingBoxFormatted}'`);
+      
+      return {
         id: lineIndex + 1,
         text: line.content || '',
         confidence: Math.round((line.confidence || 0) * 100),
+        polygon: line.polygon || [],
+        boundingBoxFormatted,
         boundingBox: {
           x: line.polygon?.[0] || 0,
           y: line.polygon?.[1] || 0,
           width: Math.abs((line.polygon?.[2] || 0) - (line.polygon?.[0] || 0)),
           height: Math.abs((line.polygon?.[5] || 0) - (line.polygon?.[1] || 0))
         },
-        words: (line.words || []).map((word: any) => ({
-          text: word.content || '',
-          confidence: Math.round((word.confidence || 0) * 100),
-          boundingBox: {
-            x: word.polygon?.[0] || 0,
-            y: word.polygon?.[1] || 0,
-            width: Math.abs((word.polygon?.[2] || 0) - (word.polygon?.[0] || 0)),
-            height: Math.abs((word.polygon?.[5] || 0) - (word.polygon?.[1] || 0))
-          }
-        }))
-      }))
-    }))
-  };
+        words: (line.words || []).map((word: any) => {
+          console.log(`...Word '${word.content}' has a confidence of ${word.confidence}`);
+          return {
+            text: word.content || '',
+            confidence: Math.round((word.confidence || 0) * 100),
+            polygon: word.polygon || [],
+            boundingBox: {
+              x: word.polygon?.[0] || 0,
+              y: word.polygon?.[1] || 0,
+              width: Math.abs((word.polygon?.[2] || 0) - (word.polygon?.[0] || 0)),
+              height: Math.abs((word.polygon?.[5] || 0) - (word.polygon?.[1] || 0))
+            }
+          };
+        })
+      };
+    });
 
-  // Process tables
+    return {
+      pageNumber: page.pageNumber || pageIndex + 1,
+      width: page.width || 0,
+      height: page.height || 0,
+      unit: page.unit || 'pixel',
+      angle: page.angle || 0,
+      lines: enhancedLines
+    };
+  });
+
+  // Calculate overall handwriting percentage
+  const totalLines = enhancedPages.reduce((sum, page) => sum + page.lines.length, 0);
+  const handwrittenLines = handwritingAnalysis.filter(style => style.isHandwritten).length;
+  const handwritingPercentage = totalLines > 0 ? Math.round((handwrittenLines / totalLines) * 100) : 0;
+
+  // Process tables (if any)
+  const tables = analyzeResult.tables || [];
   const processedTables = tables.map((table: any, tableIndex: number) => ({
     id: tableIndex + 1,
     confidence: Math.round((table.confidence || 0) * 100),
@@ -221,49 +263,59 @@ function transformAzureResponse(analyzeResult: any, modelType: string) {
       width: Math.abs((table.boundingRegions?.[0]?.polygon?.[2] || 0) - (table.boundingRegions?.[0]?.polygon?.[0] || 0)),
       height: Math.abs((table.boundingRegions?.[0]?.polygon?.[5] || 0) - (table.boundingRegions?.[0]?.polygon?.[1] || 0))
     },
+    polygon: table.boundingRegions?.[0]?.polygon || [],
     rows: extractTableRows(table)
   }));
 
-  // Process key-value pairs
+  // Enhanced key-value pairs
+  const keyValuePairs = analyzeResult.keyValuePairs || [];
   let processedKeyValuePairs = keyValuePairs.map((pair: any) => ({
     key: pair.key?.content || 'Unknown',
     value: pair.value?.content || '',
     confidence: Math.round(((pair.key?.confidence || 0) + (pair.value?.confidence || 0)) / 2 * 100)
   }));
 
-  // If we have specific document types, extract structured data
-  if (documents.length > 0 && (modelType === 'invoice' || modelType === 'receipt' || modelType === 'id')) {
-    const doc = documents[0];
-    if (doc.fields) {
-      const extractedPairs = extractDocumentFields(doc.fields);
-      processedKeyValuePairs = [...processedKeyValuePairs, ...extractedPairs];
-    }
-  }
-
-  // If no key-value pairs found, extract from general document info
+  // Add enhanced metadata
   if (processedKeyValuePairs.length === 0) {
     processedKeyValuePairs = [
-      { key: "Document Type", value: analyzeResult.modelId || "Unknown", confidence: 100 },
+      { key: "Document Type", value: "Enhanced Read Analysis", confidence: 100 },
       { key: "Processing Model", value: modelType, confidence: 100 },
       { key: "Total Pages", value: pages.length.toString(), confidence: 100 },
-      { key: "Total Tables", value: tables.length.toString(), confidence: 100 }
+      { key: "Handwriting Detection", value: `${handwritingPercentage}% handwritten`, confidence: 100 },
+      { key: "Content Length", value: `${content.length} characters`, confidence: 100 }
     ];
   }
 
   return {
-    rawText,
+    rawText: content,
     structuredData: {
-      hierarchy,
+      hierarchy: {
+        pages: enhancedPages
+      },
       tables: processedTables,
-      keyValuePairs: processedKeyValuePairs
+      keyValuePairs: processedKeyValuePairs,
+      handwritingAnalysis,
+      enhancedFeatures: {
+        totalPages: pages.length,
+        handwritingPercentage,
+        avgConfidence: calculateOverallConfidence(analyzeResult),
+        pageDimensions: enhancedPages.map(p => ({ 
+          page: p.pageNumber, 
+          width: p.width, 
+          height: p.height, 
+          unit: p.unit 
+        }))
+      }
     },
     metadata: {
       modelId: analyzeResult.modelId,
       confidence: calculateOverallConfidence(analyzeResult),
       pageCount: pages.length,
       tableCount: tables.length,
+      handwritingPercentage,
       processingTime: '2.1 seconds',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      enhancedRead: true
     }
   };
 }
@@ -298,45 +350,6 @@ function extractTableRows(table: any) {
   }
 
   return rows;
-}
-
-function extractDocumentFields(fields: any): any[] {
-  const pairs: any[] = [];
-  
-  function processField(key: string, field: any) {
-    if (field.valueType === 'string' || field.valueType === 'phoneNumber' || field.valueType === 'date') {
-      pairs.push({
-        key: formatFieldName(key),
-        value: field.content || field.value || '',
-        confidence: Math.round((field.confidence || 0) * 100)
-      });
-    } else if (field.valueType === 'array' && field.values) {
-      field.values.forEach((item: any, index: number) => {
-        if (item.properties) {
-          Object.entries(item.properties).forEach(([subKey, subField]: [string, any]) => {
-            processField(`${key}[${index}].${subKey}`, subField);
-          });
-        }
-      });
-    } else if (field.properties) {
-      Object.entries(field.properties).forEach(([subKey, subField]: [string, any]) => {
-        processField(`${key}.${subKey}`, subField);
-      });
-    }
-  }
-
-  Object.entries(fields).forEach(([key, field]: [string, any]) => {
-    processField(key, field);
-  });
-
-  return pairs;
-}
-
-function formatFieldName(key: string): string {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .replace(/\./g, ' - ');
 }
 
 function calculateOverallConfidence(analyzeResult: any): number {

@@ -7,8 +7,8 @@ import { Upload, Play, CheckCircle, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import MobileProcessingSteps from "@/components/MobileProcessingSteps";
-import MobileModelSelector from "@/components/MobileModelSelector";
-import MobileDocumentViewer from "@/components/MobileDocumentViewer";
+import EnhancedReadModelSelector from "@/components/EnhancedReadModelSelector";
+import EnhancedDocumentViewer from "@/components/EnhancedDocumentViewer";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
@@ -24,7 +24,7 @@ const TestOCR = () => {
   const [processingMetadata, setProcessingMetadata] = useState<any>(null);
   const [progress, setProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>("mixed");
+  const [selectedModel, setSelectedModel] = useState<string>("read"); // Default to enhanced read
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +86,7 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("Starting Enhanced Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
 
     try {
       // Convert file to base64
@@ -102,7 +102,7 @@ const TestOCR = () => {
         reader.readAsDataURL(selectedFile);
       });
 
-      // Simulate progress updates
+      // Enhanced progress updates
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 90) {
@@ -113,7 +113,7 @@ const TestOCR = () => {
         });
       }, 1000);
 
-      // Call Azure Document Intelligence via Supabase Edge Function
+      // Call Enhanced Azure Document Intelligence via Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
         body: {
           fileData,
@@ -125,10 +125,10 @@ const TestOCR = () => {
       setProgress(100);
 
       if (error) {
-        console.error('Azure processing error:', error);
+        console.error('Enhanced Azure processing error:', error);
         toast({
-          title: "Processing Failed",
-          description: "Failed to process document with Azure Document Intelligence.",
+          title: "Enhanced Processing Failed",
+          description: "Failed to process document with Enhanced Azure Document Intelligence.",
           variant: "destructive"
         });
         setIsProcessing(false);
@@ -141,19 +141,23 @@ const TestOCR = () => {
         setProcessingMetadata(data.data.metadata);
         setCurrentStep(4);
         
+        const handwritingInfo = data.data.metadata.handwritingPercentage > 0 
+          ? ` (${data.data.metadata.handwritingPercentage}% handwritten)`
+          : '';
+        
         toast({
-          title: "Document Intelligence Complete!",
-          description: `Successfully processed with Azure using ${selectedModel} model.`
+          title: "Enhanced Document Intelligence Complete!",
+          description: `Successfully processed with Azure using ${selectedModel} model${handwritingInfo}.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
       }
       
     } catch (error) {
-      console.error('Error processing document:', error);
+      console.error('Error in enhanced processing:', error);
       toast({
-        title: "Processing Error",
-        description: "An error occurred while processing your document.",
+        title: "Enhanced Processing Error",
+        description: "An error occurred while processing your document with enhanced features.",
         variant: "destructive"
       });
     } finally {
@@ -169,10 +173,12 @@ const TestOCR = () => {
         <div className="max-w-7xl mx-auto">
           {/* Enhanced Page Header */}
           <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Raya Intelligent Document</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">
+              Enhanced Raya Document Intelligence
+            </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Professional document processing platform with Azure Document Intelligence, structured data extraction, 
-              and comprehensive analytics.
+              Advanced document processing with Azure Document Intelligence, featuring handwriting detection, 
+              polygon bounding boxes, and enhanced text analysis capabilities.
             </p>
           </div>
 
@@ -245,11 +251,13 @@ const TestOCR = () => {
               {selectedFile && (
                 <Card className="mt-4">
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl">Model Configuration</CardTitle>
-                    <CardDescription className="text-sm">Select the optimal Azure processing model</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Enhanced Model Configuration</CardTitle>
+                    <CardDescription className="text-sm">
+                      Select the optimal Azure processing model with enhanced read capabilities
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <MobileModelSelector 
+                    <EnhancedReadModelSelector 
                       selectedModel={selectedModel} 
                       onModelChange={(model) => {
                         setSelectedModel(model);
@@ -266,12 +274,12 @@ const TestOCR = () => {
                       {isProcessing ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Processing with Azure...
+                          Enhanced Processing...
                         </>
                       ) : (
                         <>
                           <Play className="h-4 w-4 mr-2" />
-                          Start Document Intelligence
+                          Start Enhanced Document Intelligence
                         </>
                       )}
                     </Button>
@@ -279,11 +287,13 @@ const TestOCR = () => {
                     {isProcessing && (
                       <div className="mt-4">
                         <div className="flex justify-between text-sm text-gray-600 mb-2">
-                          <span>Processing with Azure Document Intelligence...</span>
+                          <span>Enhanced analysis with Azure Document Intelligence...</span>
                           <span>{progress}%</span>
                         </div>
                         <Progress value={progress} className="w-full" />
-                        <p className="text-xs text-gray-500 mt-1">Advanced analysis in progress...</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Advanced handwriting detection and polygon analysis in progress...
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -291,12 +301,27 @@ const TestOCR = () => {
               )}
             </div>
 
-            {/* Document Viewer - Full width on mobile */}
+            {/* Enhanced Document Viewer - Full width on mobile */}
             {previewUrl && (
               <div className="w-full">
-                <MobileDocumentViewer 
+                <EnhancedDocumentViewer 
                   previewUrl={previewUrl} 
-                  selectedModel={selectedModel} 
+                  selectedModel={selectedModel}
+                  boundingBoxes={structuredData?.hierarchy?.pages?.[0]?.lines?.map((line: any) => ({
+                    id: line.id.toString(),
+                    text: line.text,
+                    confidence: line.confidence,
+                    polygon: line.polygon || [],
+                    boundingBox: line.boundingBox,
+                    type: 'line' as const,
+                    isHandwritten: false // This would come from Azure's style analysis
+                  }))}
+                  handwritingPercentage={processingMetadata?.handwritingPercentage}
+                  pageDimensions={structuredData?.hierarchy?.pages?.[0] ? {
+                    width: structuredData.hierarchy.pages[0].width,
+                    height: structuredData.hierarchy.pages[0].height,
+                    unit: structuredData.hierarchy.pages[0].unit
+                  } : undefined}
                 />
               </div>
             )}
