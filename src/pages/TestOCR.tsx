@@ -35,13 +35,14 @@ const TestOCR = () => {
     setSelectedFile(file);
     setCurrentStep(2);
 
+    // Create preview URL preserving original quality
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setOcrResult("");
     setProgress(0);
     toast({
       title: "File uploaded successfully",
-      description: `${file.name} is ready for advanced OCR processing.`
+      description: `${file.name} is ready for processing at original quality.`
     });
   }, [toast]);
 
@@ -89,16 +90,17 @@ const TestOCR = () => {
     console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
 
     try {
-      // Convert file to base64
+      // Convert file to base64 without compression
       const reader = new FileReader();
       const fileData = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
           const result = reader.result as string;
-          // Remove data URL prefix (data:image/jpeg;base64,)
+          // Remove data URL prefix to get pure base64
           const base64Data = result.split(',')[1];
           resolve(base64Data);
         };
         reader.onerror = reject;
+        // Use readAsDataURL to preserve original file format and quality
         reader.readAsDataURL(selectedFile);
       });
 
@@ -117,7 +119,8 @@ const TestOCR = () => {
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
         body: {
           fileData,
-          modelType: selectedModel
+          modelType: selectedModel,
+          preserveOriginalQuality: true // Flag to indicate we want original quality
         }
       });
 
@@ -143,7 +146,7 @@ const TestOCR = () => {
         
         toast({
           title: "Document Intelligence Complete!",
-          description: `Successfully processed with Azure using ${selectedModel} model.`
+          description: `Successfully processed with Azure using ${selectedModel} model at original quality.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
@@ -161,6 +164,7 @@ const TestOCR = () => {
     }
   };
 
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -171,8 +175,8 @@ const TestOCR = () => {
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Raya Intelligent Document</h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Professional document processing platform with Azure Document Intelligence, structured data extraction, 
-              and comprehensive analytics.
+              Professional document processing platform with Azure Document Intelligence, preserving original document quality 
+              for maximum accuracy.
             </p>
           </div>
 
@@ -190,7 +194,7 @@ const TestOCR = () => {
                     <span>Document Upload</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Upload documents for Azure Document Intelligence processing
+                    Upload documents at original quality for Azure Document Intelligence processing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -219,7 +223,7 @@ const TestOCR = () => {
                         <div>
                           <p className="font-semibold text-gray-900 text-sm sm:text-base break-all">{selectedFile.name}</p>
                           <p className="text-xs sm:text-sm text-gray-500">
-                            {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type}
+                            {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type} • Original Quality
                           </p>
                         </div>
                         <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">Ready for processing</Badge>
@@ -232,7 +236,7 @@ const TestOCR = () => {
                         <div>
                           <p className="text-base sm:text-lg font-semibold text-gray-900">Drop your document here</p>
                           <p className="text-sm text-gray-500">or tap to browse files</p>
-                          <p className="text-xs text-gray-400 mt-1">Supports JPG, PNG, PDF up to 10MB</p>
+                          <p className="text-xs text-gray-400 mt-1">Supports JPG, PNG, PDF up to 10MB • Original quality preserved</p>
                         </div>
                         <Badge variant="secondary" className="text-xs">Ready for upload</Badge>
                       </div>
@@ -283,7 +287,7 @@ const TestOCR = () => {
                           <span>{progress}%</span>
                         </div>
                         <Progress value={progress} className="w-full" />
-                        <p className="text-xs text-gray-500 mt-1">Advanced analysis in progress...</p>
+                        <p className="text-xs text-gray-500 mt-1">Processing at original quality...</p>
                       </div>
                     )}
                   </CardContent>
@@ -296,7 +300,8 @@ const TestOCR = () => {
               <div className="w-full">
                 <MobileDocumentViewer 
                   previewUrl={previewUrl} 
-                  selectedModel={selectedModel} 
+                  selectedModel={selectedModel}
+                  preserveOriginalQuality={true}
                 />
               </div>
             )}
@@ -311,7 +316,7 @@ const TestOCR = () => {
                   <span>Azure Document Intelligence Results</span>
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Real-time analysis and data extraction from Azure
+                  Real-time analysis and data extraction from Azure at original document quality
                 </CardDescription>
               </CardHeader>
               <CardContent>
