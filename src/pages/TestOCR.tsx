@@ -14,6 +14,8 @@ import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import LanguageSelector from "@/components/LanguageSelector";
+import ArabicTextRenderer from "@/components/ArabicTextRenderer";
 
 const TestOCR = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -27,6 +29,8 @@ const TestOCR = () => {
   const [selectedModel, setSelectedModel] = useState<string>("mixed");
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("auto");
+  const [detectedLanguage, setDetectedLanguage] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -87,7 +91,7 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel, "and language:", selectedLanguage);
 
     try {
       // Convert file to base64 without compression
@@ -115,12 +119,13 @@ const TestOCR = () => {
         });
       }, 1000);
 
-      // Call Azure Document Intelligence via Supabase Edge Function
+      // Call Azure Document Intelligence with language parameter
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
         body: {
           fileData,
           modelType: selectedModel,
-          preserveOriginalQuality: true // Flag to indicate we want original quality
+          preserveOriginalQuality: true,
+          language: selectedLanguage !== "auto" ? selectedLanguage : undefined
         }
       });
 
@@ -142,11 +147,12 @@ const TestOCR = () => {
         setOcrResult(data.data.rawText);
         setStructuredData(data.data.structuredData);
         setProcessingMetadata(data.data.metadata);
+        setDetectedLanguage(data.data.metadata?.detectedLanguage || "");
         setCurrentStep(4);
         
         toast({
           title: "Document Intelligence Complete!",
-          description: `Successfully processed with Azure using ${selectedModel} model at original quality.`
+          description: `Successfully processed with Azure using ${selectedModel} model${selectedLanguage !== "auto" ? ` for ${selectedLanguage} language` : ""}.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
@@ -176,7 +182,7 @@ const TestOCR = () => {
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Raya Intelligent Document</h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
               Professional document processing platform with Azure Document Intelligence, preserving original document quality 
-              for maximum accuracy.
+              for maximum accuracy with enhanced Arabic language support.
             </p>
           </div>
 
@@ -245,21 +251,28 @@ const TestOCR = () => {
                 </CardContent>
               </Card>
 
-              {/* Enhanced Model Configuration */}
+              {/* Enhanced Model and Language Configuration */}
               {selectedFile && (
                 <Card className="mt-4">
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl">Model Configuration</CardTitle>
-                    <CardDescription className="text-sm">Select the optimal Azure processing model</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Processing Configuration</CardTitle>
+                    <CardDescription className="text-sm">Select optimal Azure model and language settings</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <MobileModelSelector 
-                      selectedModel={selectedModel} 
-                      onModelChange={(model) => {
-                        setSelectedModel(model);
-                        setCurrentStep(3);
-                      }} 
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <MobileModelSelector 
+                        selectedModel={selectedModel} 
+                        onModelChange={(model) => {
+                          setSelectedModel(model);
+                          setCurrentStep(3);
+                        }} 
+                      />
+                      
+                      <LanguageSelector 
+                        selectedLanguage={selectedLanguage}
+                        onLanguageChange={setSelectedLanguage}
+                      />
+                    </div>
                     
                     <Button 
                       onClick={processWithAzure} 
@@ -287,7 +300,9 @@ const TestOCR = () => {
                           <span>{progress}%</span>
                         </div>
                         <Progress value={progress} className="w-full" />
-                        <p className="text-xs text-gray-500 mt-1">Processing at original quality...</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Processing at original quality{selectedLanguage !== "auto" ? ` with ${selectedLanguage} language optimization` : ""}...
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -307,7 +322,7 @@ const TestOCR = () => {
             )}
           </div>
 
-          {/* Enhanced Results Section */}
+          {/* Enhanced Results Section with Arabic Support */}
           {(ocrResult || isProcessing) && (
             <Card className="mt-6 sm:mt-8">
               <CardHeader className="pb-4">
@@ -316,7 +331,7 @@ const TestOCR = () => {
                   <span>Azure Document Intelligence Results</span>
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Real-time analysis and data extraction from Azure at original document quality
+                  Real-time analysis and data extraction from Azure with enhanced Arabic language support
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -329,8 +344,9 @@ const TestOCR = () => {
                   </div>
                 ) : (
                   <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
-                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
                       <TabsTrigger value="analytics" className="text-xs sm:text-sm p-2 sm:p-3">Analytics</TabsTrigger>
+                      <TabsTrigger value="arabic" className="text-xs sm:text-sm p-2 sm:p-3">Arabic View</TabsTrigger>
                       <TabsTrigger value="structured" className="text-xs sm:text-sm p-2 sm:p-3">Data</TabsTrigger>
                       <TabsTrigger value="advanced" className="text-xs sm:text-sm p-2 sm:p-3 hidden sm:flex">Advanced</TabsTrigger>
                       <TabsTrigger value="raw" className="text-xs sm:text-sm p-2 sm:p-3">Raw</TabsTrigger>
@@ -341,6 +357,14 @@ const TestOCR = () => {
                         selectedModel={selectedModel} 
                         processingTime={processingMetadata?.processingTime || '2.5 seconds'} 
                         overallConfidence={processingMetadata?.confidence || 98.3} 
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="arabic" className="mt-4 sm:mt-6">
+                      <ArabicTextRenderer 
+                        text={ocrResult}
+                        confidence={processingMetadata?.confidence}
+                        detectedLanguage={detectedLanguage}
                       />
                     </TabsContent>
 

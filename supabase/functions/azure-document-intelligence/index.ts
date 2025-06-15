@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -9,6 +8,8 @@ const corsHeaders = {
 interface AnalyzeDocumentRequest {
   fileData: string; // base64 encoded file
   modelType: string;
+  language?: string; // Added language parameter
+  preserveOriginalQuality?: boolean;
 }
 
 serve(async (req) => {
@@ -25,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { fileData, modelType }: AnalyzeDocumentRequest = await req.json();
+    const { fileData, modelType, language, preserveOriginalQuality }: AnalyzeDocumentRequest = await req.json();
     
     const azureKey = Deno.env.get('AZURE_DOCUMENT_INTELLIGENCE_KEY');
     const azureEndpoint = 'https://arabicenglishhandwritten.cognitiveservices.azure.com/';
@@ -58,11 +59,24 @@ serve(async (req) => {
 
     const azureModel = modelMapping[modelType] || 'prebuilt-document';
     
-    console.log(`Starting analysis with model: ${azureModel}`);
+    console.log(`Starting analysis with model: ${azureModel}${language ? ` and language: ${language}` : ''}`);
 
-    // Step 1: Submit document for analysis
-    const analyzeUrl = `${azureEndpoint}formrecognizer/documentModels/${azureModel}:analyze?api-version=2023-07-31`;
+    // Build URL with language parameter if specified
+    let analyzeUrl = `${azureEndpoint}formrecognizer/documentModels/${azureModel}:analyze?api-version=2023-07-31`;
     
+    // Add language parameter for supported languages
+    if (language && language !== 'auto') {
+      if (language === 'ar-en') {
+        // For mixed Arabic-English, use locale parameter
+        analyzeUrl += `&locale=ar-SA,en-US`;
+      } else if (language === 'ar') {
+        analyzeUrl += `&locale=ar-SA`;
+      } else if (language === 'en') {
+        analyzeUrl += `&locale=en-US`;
+      }
+    }
+    
+    // Step 1: Submit document for analysis
     const analyzeResponse = await fetch(analyzeUrl, {
       method: 'POST',
       headers: {
@@ -122,7 +136,7 @@ serve(async (req) => {
         console.log('Analysis completed successfully');
         
         // Transform Azure response to our expected format
-        const transformedResult = transformAzureResponse(result.analyzeResult, modelType);
+        const transformedResult = transformAzureResponse(result.analyzeResult, modelType, language);
         
         return new Response(
           JSON.stringify({ 
@@ -169,7 +183,7 @@ serve(async (req) => {
   }
 });
 
-function transformAzureResponse(analyzeResult: any, modelType: string) {
+function transformAzureResponse(analyzeResult: any, modelType: string, language?: string) {
   const pages = analyzeResult.pages || [];
   const tables = analyzeResult.tables || [];
   const keyValuePairs = analyzeResult.keyValuePairs || [];
@@ -183,7 +197,9 @@ function transformAzureResponse(analyzeResult: any, modelType: string) {
     ).join('\n\n');
   }
 
-  // Process hierarchy data
+  // Detect language from content
+  const detectedLanguage = detectLanguage(rawText, language);
+
   const hierarchy = {
     pages: pages.map((page: any, pageIndex: number) => ({
       pageNumber: pageIndex + 1,
@@ -211,7 +227,6 @@ function transformAzureResponse(analyzeResult: any, modelType: string) {
     }))
   };
 
-  // Process tables
   const processedTables = tables.map((table: any, tableIndex: number) => ({
     id: tableIndex + 1,
     confidence: Math.round((table.confidence || 0) * 100),
@@ -224,14 +239,12 @@ function transformAzureResponse(analyzeResult: any, modelType: string) {
     rows: extractTableRows(table)
   }));
 
-  // Process key-value pairs
   let processedKeyValuePairs = keyValuePairs.map((pair: any) => ({
     key: pair.key?.content || 'Unknown',
     value: pair.value?.content || '',
     confidence: Math.round(((pair.key?.confidence || 0) + (pair.value?.confidence || 0)) / 2 * 100)
   }));
 
-  // If we have specific document types, extract structured data
   if (documents.length > 0 && (modelType === 'invoice' || modelType === 'receipt' || modelType === 'id')) {
     const doc = documents[0];
     if (doc.fields) {
@@ -240,11 +253,12 @@ function transformAzureResponse(analyzeResult: any, modelType: string) {
     }
   }
 
-  // If no key-value pairs found, extract from general document info
   if (processedKeyValuePairs.length === 0) {
     processedKeyValuePairs = [
       { key: "Document Type", value: analyzeResult.modelId || "Unknown", confidence: 100 },
       { key: "Processing Model", value: modelType, confidence: 100 },
+      { key: "Language Setting", value: language || "Auto-detect", confidence: 100 },
+      { key: "Detected Language", value: detectedLanguage, confidence: 100 },
       { key: "Total Pages", value: pages.length.toString(), confidence: 100 },
       { key: "Total Tables", value: tables.length.toString(), confidence: 100 }
     ];
@@ -263,16 +277,37 @@ function transformAzureResponse(analyzeResult: any, modelType: string) {
       pageCount: pages.length,
       tableCount: tables.length,
       processingTime: '2.1 seconds',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      detectedLanguage,
+      languageSetting: language || 'auto'
     }
   };
+}
+
+function detectLanguage(text: string, requestedLanguage?: string): string {
+  if (!text) return 'Unknown';
+  
+  const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+  const englishRegex = /[a-zA-Z]/;
+  
+  const hasArabic = arabicRegex.test(text);
+  const hasEnglish = englishRegex.test(text);
+  
+  if (hasArabic && hasEnglish) {
+    return 'Arabic + English';
+  } else if (hasArabic) {
+    return 'Arabic';
+  } else if (hasEnglish) {
+    return 'English';
+  }
+  
+  return requestedLanguage || 'Unknown';
 }
 
 function extractTableRows(table: any) {
   const rows: any[] = [];
   const cells = table.cells || [];
   
-  // Group cells by row
   const rowMap = new Map();
   cells.forEach((cell: any) => {
     const rowIndex = cell.rowIndex || 0;
@@ -282,7 +317,6 @@ function extractTableRows(table: any) {
     rowMap.get(rowIndex).push(cell);
   });
 
-  // Convert to our format
   for (const [rowIndex, rowCells] of rowMap.entries()) {
     const sortedCells = rowCells.sort((a: any, b: any) => (a.columnIndex || 0) - (b.columnIndex || 0));
     const cellContents = sortedCells.map((cell: any) => cell.content || '');
