@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,6 @@ import { Upload, Play, CheckCircle, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import MobileProcessingSteps from "@/components/MobileProcessingSteps";
-import EnhancedReadModelSelector from "@/components/EnhancedReadModelSelector";
 import EnhancedDocumentViewer from "@/components/EnhancedDocumentViewer";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import StructuredDataViewer from "@/components/StructuredDataViewer";
@@ -24,7 +24,7 @@ const TestOCR = () => {
   const [processingMetadata, setProcessingMetadata] = useState<any>(null);
   const [progress, setProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>("read"); // Default to enhanced read
+  const selectedModel = "read"; // Fixed to prebuilt-read model
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +41,7 @@ const TestOCR = () => {
     setProgress(0);
     toast({
       title: "File uploaded successfully",
-      description: `${file.name} is ready for advanced OCR processing.`
+      description: `${file.name} is ready for prebuilt-read processing.`
     });
   }, [toast]);
 
@@ -86,7 +86,7 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Enhanced Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("Starting Azure Document Intelligence prebuilt-read processing for:", selectedFile.name);
 
     try {
       // Convert file to base64
@@ -113,7 +113,7 @@ const TestOCR = () => {
         });
       }, 1000);
 
-      // Call Enhanced Azure Document Intelligence via Supabase Edge Function
+      // Call Azure Document Intelligence via Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
         body: {
           fileData,
@@ -125,10 +125,10 @@ const TestOCR = () => {
       setProgress(100);
 
       if (error) {
-        console.error('Enhanced Azure processing error:', error);
+        console.error('Azure processing error:', error);
         toast({
-          title: "Enhanced Processing Failed",
-          description: "Failed to process document with Enhanced Azure Document Intelligence.",
+          title: "Processing Failed",
+          description: "Failed to process document with Azure Document Intelligence.",
           variant: "destructive"
         });
         setIsProcessing(false);
@@ -146,18 +146,18 @@ const TestOCR = () => {
           : '';
         
         toast({
-          title: "Enhanced Document Intelligence Complete!",
-          description: `Successfully processed with Azure using ${selectedModel} model${handwritingInfo}.`
+          title: "Document Intelligence Complete!",
+          description: `Successfully processed with Azure prebuilt-read model${handwritingInfo}.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
       }
       
     } catch (error) {
-      console.error('Error in enhanced processing:', error);
+      console.error('Error in processing:', error);
       toast({
-        title: "Enhanced Processing Error",
-        description: "An error occurred while processing your document with enhanced features.",
+        title: "Processing Error",
+        description: "An error occurred while processing your document.",
         variant: "destructive"
       });
     } finally {
@@ -171,24 +171,28 @@ const TestOCR = () => {
       
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="max-w-7xl mx-auto">
-          {/* Enhanced Page Header */}
+          {/* Page Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">
-              Enhanced Raya Document Intelligence
+              Azure Document Intelligence
             </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Advanced document processing with Azure Document Intelligence, featuring handwriting detection, 
+              Advanced document processing with Azure's prebuilt-read model, featuring handwriting detection, 
               polygon bounding boxes, and enhanced text analysis capabilities.
             </p>
+            <div className="mt-4">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                Prebuilt-Read Model
+              </Badge>
+            </div>
           </div>
 
           <MobileProcessingSteps currentStep={currentStep} />
 
           {/* Mobile-First Layout */}
           <div className="space-y-6">
-            {/* Upload & Configuration - Full width on mobile */}
+            {/* Upload Card */}
             <div className="w-full">
-              {/* Enhanced Upload Card */}
               <Card>
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
@@ -196,7 +200,7 @@ const TestOCR = () => {
                     <span>Document Upload</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Upload documents for Azure Document Intelligence processing
+                    Upload documents for Azure prebuilt-read processing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -244,64 +248,48 @@ const TestOCR = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Process Button */}
+                  {selectedFile && (
+                    <div className="mt-4">
+                      <Button 
+                        onClick={processWithAzure} 
+                        disabled={isProcessing} 
+                        className="w-full h-12 text-base"
+                        size="lg"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Processing with Prebuilt-Read...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Start Document Intelligence
+                          </>
+                        )}
+                      </Button>
+                      
+                      {isProcessing && (
+                        <div className="mt-4">
+                          <div className="flex justify-between text-sm text-gray-600 mb-2">
+                            <span>Azure prebuilt-read analysis...</span>
+                            <span>{progress}%</span>
+                          </div>
+                          <Progress value={progress} className="w-full" />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Handwriting detection and polygon analysis in progress...
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-
-              {/* Enhanced Model Configuration */}
-              {selectedFile && (
-                <Card className="mt-4">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl">Enhanced Model Configuration</CardTitle>
-                    <CardDescription className="text-sm">
-                      Select the optimal Azure processing model with enhanced read capabilities
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <EnhancedReadModelSelector 
-                      selectedModel={selectedModel} 
-                      onModelChange={(model) => {
-                        setSelectedModel(model);
-                        setCurrentStep(3);
-                      }} 
-                    />
-                    
-                    <Button 
-                      onClick={processWithAzure} 
-                      disabled={isProcessing} 
-                      className="w-full h-12 text-base"
-                      size="lg"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Enhanced Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Start Enhanced Document Intelligence
-                        </>
-                      )}
-                    </Button>
-                    
-                    {isProcessing && (
-                      <div className="mt-4">
-                        <div className="flex justify-between text-sm text-gray-600 mb-2">
-                          <span>Enhanced analysis with Azure Document Intelligence...</span>
-                          <span>{progress}%</span>
-                        </div>
-                        <Progress value={progress} className="w-full" />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Advanced handwriting detection and polygon analysis in progress...
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
             </div>
 
-            {/* Enhanced Document Viewer - Full width on mobile */}
+            {/* Enhanced Document Viewer */}
             {previewUrl && (
               <div className="w-full">
                 <EnhancedDocumentViewer 
@@ -314,7 +302,7 @@ const TestOCR = () => {
                     polygon: line.polygon || [],
                     boundingBox: line.boundingBox,
                     type: 'line' as const,
-                    isHandwritten: false // This would come from Azure's style analysis
+                    isHandwritten: false
                   }))}
                   handwritingPercentage={processingMetadata?.handwritingPercentage}
                   pageDimensions={structuredData?.hierarchy?.pages?.[0] ? {
@@ -327,16 +315,16 @@ const TestOCR = () => {
             )}
           </div>
 
-          {/* Enhanced Results Section */}
+          {/* Results Section */}
           {(ocrResult || isProcessing) && (
             <Card className="mt-6 sm:mt-8">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
                   <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span>Azure Document Intelligence Results</span>
+                  <span>Document Intelligence Results</span>
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Real-time analysis and data extraction from Azure
+                  Real-time analysis and data extraction from Azure prebuilt-read
                 </CardDescription>
               </CardHeader>
               <CardContent>
