@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import EnhancedDocumentViewer from "@/components/EnhancedDocumentViewer";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import StructuredDataViewer from "@/components/StructuredDataViewer";
 import AdvancedResults from "@/components/AdvancedResults";
+import ReadLayoutModelSelector from "@/components/ReadLayoutModelSelector";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,7 +24,7 @@ const TestOCR = () => {
   const [processingMetadata, setProcessingMetadata] = useState<any>(null);
   const [progress, setProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
-  const selectedModel = "read"; // Fixed to prebuilt-read model
+  const [selectedModel, setSelectedModel] = useState("layout"); // Default to layout model
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +86,7 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Raya Document Intelligence processing for:", selectedFile.name);
+    console.log("Starting Raya Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
 
     try {
       // Convert file to base64
@@ -113,7 +113,7 @@ const TestOCR = () => {
         });
       }, 1000);
 
-      // Call Azure Document Intelligence via Supabase Edge Function
+      // Call Raya Document Intelligence via Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
         body: {
           fileData,
@@ -141,13 +141,14 @@ const TestOCR = () => {
         setProcessingMetadata(data.data.metadata);
         setCurrentStep(4);
         
-        const handwritingInfo = data.data.metadata.handwritingPercentage > 0 
+        const modelTypeDisplay = selectedModel === 'layout' ? 'Layout Analysis' : 'Text Reading';
+        const additionalInfo = data.data.metadata.handwritingPercentage > 0 
           ? ` (${data.data.metadata.handwritingPercentage}% handwritten)`
           : '';
         
         toast({
-          title: "Document Intelligence Complete!",
-          description: `Successfully processed with Raya Document Intelligence${handwritingInfo}.`
+          title: "Raya Document Intelligence Complete!",
+          description: `Successfully processed with ${modelTypeDisplay}${additionalInfo}.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
@@ -177,12 +178,12 @@ const TestOCR = () => {
               Raya Document Intelligence
             </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Advanced document processing with Raya's intelligent OCR technology, featuring handwriting detection, 
-              polygon bounding boxes, and enhanced text analysis capabilities.
+              Advanced document processing with Raya's intelligent OCR technology, featuring comprehensive layout analysis, 
+              table extraction, checkbox detection, and enhanced text analysis capabilities.
             </p>
             <div className="mt-4">
               <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                Intelligent OCR Model
+                {selectedModel === 'layout' ? 'Layout Analysis Model' : 'Text Reading Model'}
               </Badge>
             </div>
           </div>
@@ -191,6 +192,27 @@ const TestOCR = () => {
 
           {/* Mobile-First Layout */}
           <div className="space-y-6">
+            {/* Model Selection */}
+            <div className="w-full">
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                    <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <span>Analysis Model</span>
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Choose between comprehensive layout analysis or fast text reading
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ReadLayoutModelSelector 
+                    selectedModel={selectedModel} 
+                    onModelChange={setSelectedModel} 
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Upload Card */}
             <div className="w-full">
               <Card>
@@ -266,7 +288,7 @@ const TestOCR = () => {
                         ) : (
                           <>
                             <Play className="h-4 w-4 mr-2" />
-                            Start Document Intelligence
+                            Start {selectedModel === 'layout' ? 'Layout Analysis' : 'Text Reading'}
                           </>
                         )}
                       </Button>
@@ -279,7 +301,10 @@ const TestOCR = () => {
                           </div>
                           <Progress value={progress} className="w-full" />
                           <p className="text-xs text-gray-500 mt-1">
-                            Handwriting detection and polygon analysis in progress...
+                            {selectedModel === 'layout' 
+                              ? 'Analyzing layout, tables, checkboxes, and figures...'
+                              : 'Extracting text with handwriting detection...'
+                            }
                           </p>
                         </div>
                       )}
