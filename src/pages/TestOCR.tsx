@@ -86,7 +86,7 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Raya Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
 
     try {
       // Convert file to base64
@@ -94,7 +94,6 @@ const TestOCR = () => {
       const fileData = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
           const result = reader.result as string;
-          // Remove data URL prefix (data:image/jpeg;base64,)
           const base64Data = result.split(',')[1];
           resolve(base64Data);
         };
@@ -113,7 +112,7 @@ const TestOCR = () => {
         });
       }, 1000);
 
-      // Call Raya Document Intelligence via Supabase Edge Function
+      // Call Azure Document Intelligence via Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
         body: {
           fileData,
@@ -125,10 +124,10 @@ const TestOCR = () => {
       setProgress(100);
 
       if (error) {
-        console.error('Raya processing error:', error);
+        console.error('Azure processing error:', error);
         toast({
           title: "Processing Failed",
-          description: "Failed to process document with Raya Document Intelligence.",
+          description: "Failed to process document with Azure Document Intelligence.",
           variant: "destructive"
         });
         setIsProcessing(false);
@@ -137,18 +136,21 @@ const TestOCR = () => {
 
       if (data.success) {
         setOcrResult(data.data.rawText);
-        setStructuredData(data.data.structuredData);
+        setStructuredData(data.data);
         setProcessingMetadata(data.data.metadata);
         setCurrentStep(4);
         
         const modelTypeDisplay = selectedModel === 'layout' ? 'Layout Analysis' : 'Text Reading';
-        const additionalInfo = data.data.metadata.handwritingPercentage > 0 
-          ? ` (${data.data.metadata.handwritingPercentage}% handwritten)`
-          : '';
+        const elementsFound = [
+          data.data.metadata.totalTextLines && `${data.data.metadata.totalTextLines} text lines`,
+          data.data.metadata.totalTables && `${data.data.metadata.totalTables} tables`,
+          data.data.metadata.totalCheckboxes && `${data.data.metadata.totalCheckboxes} checkboxes`,
+          data.data.metadata.totalFigures && `${data.data.metadata.totalFigures} figures`
+        ].filter(Boolean).join(', ');
         
         toast({
-          title: "Raya Document Intelligence Complete!",
-          description: `Successfully processed with ${modelTypeDisplay}${additionalInfo}.`
+          title: "Azure Document Intelligence Complete!",
+          description: `Successfully extracted: ${elementsFound || 'document content'}.`
         });
       } else {
         throw new Error(data.error || 'Unknown error');
@@ -175,15 +177,21 @@ const TestOCR = () => {
           {/* Page Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">
-              Raya Document Intelligence
+              Azure Document Intelligence
             </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto px-2">
-              Advanced document processing with Raya's intelligent OCR technology, featuring comprehensive layout analysis, 
-              table extraction, checkbox detection, and enhanced text analysis capabilities.
+              Extract <span className="font-semibold text-blue-600">Text</span>, 
+              <span className="font-semibold text-green-600"> Tables</span>, 
+              <span className="font-semibold text-purple-600"> Checkboxes</span>, and 
+              <span className="font-semibold text-orange-600"> Figures</span> from your documents with 
+              Azure's advanced OCR technology.
             </p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Badge variant="outline" className="bg-blue-50 text-blue-700">
                 {selectedModel === 'layout' ? 'Layout Analysis Model' : 'Text Reading Model'}
+              </Badge>
+              <Badge variant="outline" className="bg-green-50 text-green-700">
+                Multi-language Support
               </Badge>
             </div>
           </div>
@@ -201,7 +209,7 @@ const TestOCR = () => {
                     <span>Analysis Model</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Choose between comprehensive layout analysis or fast text reading
+                    Choose <span className="font-medium">Layout Analysis</span> for comprehensive extraction of text, tables, checkboxes, and figures
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -222,7 +230,7 @@ const TestOCR = () => {
                     <span>Document Upload</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Upload documents for Raya Document Intelligence processing
+                    Upload documents for comprehensive analysis of text, tables, checkboxes, and figures
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -283,12 +291,12 @@ const TestOCR = () => {
                         {isProcessing ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Processing with Raya Intelligence...
+                            Extracting Text, Tables, Checkboxes & Figures...
                           </>
                         ) : (
                           <>
                             <Play className="h-4 w-4 mr-2" />
-                            Start {selectedModel === 'layout' ? 'Layout Analysis' : 'Text Reading'}
+                            Extract Text, Tables, Checkboxes & Figures
                           </>
                         )}
                       </Button>
@@ -296,14 +304,14 @@ const TestOCR = () => {
                       {isProcessing && (
                         <div className="mt-4">
                           <div className="flex justify-between text-sm text-gray-600 mb-2">
-                            <span>Raya Document Intelligence analysis...</span>
+                            <span>Azure Document Intelligence analysis...</span>
                             <span>{progress}%</span>
                           </div>
                           <Progress value={progress} className="w-full" />
                           <p className="text-xs text-gray-500 mt-1">
                             {selectedModel === 'layout' 
-                              ? 'Analyzing layout, tables, checkboxes, and figures...'
-                              : 'Extracting text with handwriting detection...'
+                              ? 'Analyzing document structure: text, tables, checkboxes, and figures...'
+                              : 'Extracting text with basic layout detection...'
                             }
                           </p>
                         </div>
@@ -320,7 +328,7 @@ const TestOCR = () => {
                 <EnhancedDocumentViewer 
                   previewUrl={previewUrl} 
                   selectedModel={selectedModel}
-                  boundingBoxes={structuredData?.hierarchy?.pages?.[0]?.lines?.map((line: any) => ({
+                  boundingBoxes={structuredData?.structuredData?.hierarchy?.pages?.[0]?.lines?.map((line: any) => ({
                     id: line.id.toString(),
                     text: line.text,
                     confidence: line.confidence,
@@ -329,11 +337,10 @@ const TestOCR = () => {
                     type: 'line' as const,
                     isHandwritten: false
                   }))}
-                  handwritingPercentage={processingMetadata?.handwritingPercentage}
-                  pageDimensions={structuredData?.hierarchy?.pages?.[0] ? {
-                    width: structuredData.hierarchy.pages[0].width,
-                    height: structuredData.hierarchy.pages[0].height,
-                    unit: structuredData.hierarchy.pages[0].unit
+                  pageDimensions={structuredData?.structuredData?.hierarchy?.pages?.[0] ? {
+                    width: structuredData.structuredData.hierarchy.pages[0].width,
+                    height: structuredData.structuredData.hierarchy.pages[0].height,
+                    unit: structuredData.structuredData.hierarchy.pages[0].unit
                   } : undefined}
                 />
               </div>
@@ -349,7 +356,7 @@ const TestOCR = () => {
                   <span>Document Intelligence Results</span>
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Real-time analysis and data extraction from Raya Document Intelligence
+                  Extracted text, tables, checkboxes, and figures from Azure Document Intelligence
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -357,14 +364,14 @@ const TestOCR = () => {
                   <div className="flex items-center justify-center h-32 sm:h-64">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                      <p className="text-gray-600 text-sm">Running Raya Document Intelligence...</p>
+                      <p className="text-gray-600 text-sm">Analyzing document structure...</p>
                     </div>
                   </div>
                 ) : (
                   <Tabs value={activeResultsTab} onValueChange={setActiveResultsTab}>
                     <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
                       <TabsTrigger value="analytics" className="text-xs sm:text-sm p-2 sm:p-3">Analytics</TabsTrigger>
-                      <TabsTrigger value="structured" className="text-xs sm:text-sm p-2 sm:p-3">Data</TabsTrigger>
+                      <TabsTrigger value="structured" className="text-xs sm:text-sm p-2 sm:p-3">Elements</TabsTrigger>
                       <TabsTrigger value="advanced" className="text-xs sm:text-sm p-2 sm:p-3 hidden sm:flex">Advanced</TabsTrigger>
                       <TabsTrigger value="raw" className="text-xs sm:text-sm p-2 sm:p-3">Raw</TabsTrigger>
                     </TabsList>
@@ -393,13 +400,13 @@ const TestOCR = () => {
                       <Card>
                         <CardHeader className="pb-4">
                           <CardTitle className="text-lg">Raw OCR Output</CardTitle>
-                          <CardDescription className="text-sm">Unprocessed text extraction results from Raya Intelligence</CardDescription>
+                          <CardDescription className="text-sm">Unprocessed text extraction results from Azure Intelligence</CardDescription>
                         </CardHeader>
                         <CardContent>
                           <textarea 
                             value={ocrResult} 
                             className="w-full h-64 sm:h-96 bg-gray-50 border rounded-lg p-3 sm:p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-xs sm:text-sm" 
-                            placeholder="Raya OCR results will appear here..." 
+                            placeholder="Azure OCR results will appear here..." 
                             readOnly 
                           />
                         </CardContent>
