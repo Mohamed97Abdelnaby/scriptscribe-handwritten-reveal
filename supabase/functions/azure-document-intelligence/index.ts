@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -35,14 +36,21 @@ serve(async (req) => {
       );
     }
 
-    // Clean the endpoint URL and ensure it doesn't have double slashes
-    const cleanEndpoint = endpoint.replace(/\/+$/, '');
+    // Clean and validate the endpoint URL and API key
+    const cleanEndpoint = String(endpoint).trim().replace(/\/+$/, '');
+    const cleanApiKey = String(apiKey).trim().replace(/[^\x00-\x7F]/g, ''); // Remove non-ASCII characters
+    
+    if (!cleanApiKey || cleanApiKey.length === 0) {
+      console.error('Invalid API key format');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid API key format' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const analyzeUrl = `${cleanEndpoint}/documentintelligence/documentModels/prebuilt-${modelType}:analyze?api-version=2024-11-30`;
     console.log('Submitting document to:', analyzeUrl);
 
-    // Ensure the API key is properly formatted as a string
-    const cleanApiKey = String(apiKey).trim();
-    
     const submitResponse = await fetch(analyzeUrl, {
       method: 'POST',
       headers: {
