@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,7 @@ const TestOCR = () => {
   const [processingMetadata, setProcessingMetadata] = useState<any>(null);
   const [progress, setProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("layout"); // Default to layout model
+  const [selectedModel, setSelectedModel] = useState("layout");
   const [currentStep, setCurrentStep] = useState(1);
   const [activeResultsTab, setActiveResultsTab] = useState("analytics");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +87,8 @@ const TestOCR = () => {
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep(3);
-    console.log("Starting Azure Document Intelligence processing for:", selectedFile.name, "with model:", selectedModel);
+    console.log("=== Starting Azure Document Intelligence processing ===");
+    console.log("File:", selectedFile.name, "Model:", selectedModel);
 
     try {
       // Convert file to base64
@@ -101,6 +103,8 @@ const TestOCR = () => {
         reader.readAsDataURL(selectedFile);
       });
 
+      console.log("File converted to base64, length:", fileData.length);
+
       // Enhanced progress updates
       const progressInterval = setInterval(() => {
         setProgress(prev => {
@@ -111,6 +115,8 @@ const TestOCR = () => {
           return prev + 10;
         });
       }, 1000);
+
+      console.log("Calling Supabase edge function...");
 
       // Call Azure Document Intelligence via Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('azure-document-intelligence', {
@@ -123,29 +129,61 @@ const TestOCR = () => {
       clearInterval(progressInterval);
       setProgress(100);
 
+      console.log("=== Edge function response ===");
+      console.log("Error:", error);
+      console.log("Data:", data);
+      console.log("Data type:", typeof data);
+      console.log("Data keys:", data ? Object.keys(data) : 'null');
+
       if (error) {
-        console.error('Azure processing error:', error);
+        console.error('=== Supabase function error ===', error);
         toast({
           title: "Processing Failed",
-          description: "Failed to process document with Azure Document Intelligence.",
+          description: `Failed to process document: ${error.message || 'Unknown error'}`,
           variant: "destructive"
         });
         setIsProcessing(false);
         return;
       }
 
-      if (data.success) {
-        setOcrResult(data.data.rawText);
+      if (!data) {
+        console.error('=== No data returned from edge function ===');
+        toast({
+          title: "Processing Failed",
+          description: "No data returned from the processing service.",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      if (data.success === false) {
+        console.error('=== Edge function returned error ===', data);
+        toast({
+          title: "Processing Failed",
+          description: data.error || 'Unknown error from processing service',
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      if (data.success && data.data) {
+        console.log("=== Processing successful ===");
+        console.log("Raw text length:", data.data.rawText?.length || 0);
+        console.log("Metadata:", data.data.metadata);
+        
+        setOcrResult(data.data.rawText || '');
         setStructuredData(data.data);
         setProcessingMetadata(data.data.metadata);
         setCurrentStep(4);
         
         const modelTypeDisplay = selectedModel === 'layout' ? 'Layout Analysis' : 'Text Reading';
         const elementsFound = [
-          data.data.metadata.totalTextLines && `${data.data.metadata.totalTextLines} text lines`,
-          data.data.metadata.totalTables && `${data.data.metadata.totalTables} tables`,
-          data.data.metadata.totalCheckboxes && `${data.data.metadata.totalCheckboxes} checkboxes`,
-          data.data.metadata.totalFigures && `${data.data.metadata.totalFigures} figures`
+          data.data.metadata?.totalTextLines && `${data.data.metadata.totalTextLines} text lines`,
+          data.data.metadata?.totalTables && `${data.data.metadata.totalTables} tables`,
+          data.data.metadata?.totalCheckboxes && `${data.data.metadata.totalCheckboxes} checkboxes`,
+          data.data.metadata?.totalFigures && `${data.data.metadata.totalFigures} figures`
         ].filter(Boolean).join(', ');
         
         toast({
@@ -153,14 +191,19 @@ const TestOCR = () => {
           description: `Successfully extracted: ${elementsFound || 'document content'}.`
         });
       } else {
-        throw new Error(data.error || 'Unknown error');
+        console.error('=== Unexpected response format ===', data);
+        toast({
+          title: "Processing Failed",
+          description: "Unexpected response format from processing service",
+          variant: "destructive"
+        });
       }
       
     } catch (error) {
-      console.error('Error in processing:', error);
+      console.error('=== Error in processWithAzure ===', error);
       toast({
         title: "Processing Error",
-        description: "An error occurred while processing your document.",
+        description: `An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {

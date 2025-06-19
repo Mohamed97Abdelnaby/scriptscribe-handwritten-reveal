@@ -13,16 +13,30 @@ serve(async (req) => {
   }
 
   try {
-    const { fileData, modelType = 'layout' } = await req.json();
+    console.log('=== Azure Document Intelligence Function Started ===');
+    
+    const requestBody = await req.json();
+    console.log('Request received with keys:', Object.keys(requestBody));
+    
+    const { fileData, modelType = 'layout' } = requestBody;
 
     if (!fileData) {
+      console.error('No file data provided in request');
       return new Response(
-        JSON.stringify({ success: false, error: 'No file data provided' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'No file data provided',
+          details: 'fileData field is missing from request body'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
     console.log(`Starting Azure Document Intelligence analysis with model: prebuilt-${modelType}`);
+    console.log('File data length:', fileData.length);
 
     // Azure Document Intelligence configuration
     const endpoint = Deno.env.get('AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT');
@@ -30,9 +44,18 @@ serve(async (req) => {
 
     if (!endpoint || !apiKey) {
       console.error('Missing Azure Document Intelligence credentials');
+      console.error('Endpoint exists:', !!endpoint);
+      console.error('API Key exists:', !!apiKey);
       return new Response(
-        JSON.stringify({ success: false, error: 'Azure credentials not configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'Azure credentials not configured',
+          details: 'Missing AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT or AZURE_DOCUMENT_INTELLIGENCE_KEY'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
@@ -66,8 +89,16 @@ serve(async (req) => {
       const errorText = await submitResponse.text();
       console.error('Submit failed:', submitResponse.status, errorText);
       return new Response(
-        JSON.stringify({ success: false, error: `Analysis submission failed: ${submitResponse.status} - ${errorText}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: `Analysis submission failed: ${submitResponse.status}`,
+          details: errorText,
+          statusCode: submitResponse.status
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
@@ -76,8 +107,15 @@ serve(async (req) => {
     if (!operationLocation) {
       console.error('No operation-location header found');
       return new Response(
-        JSON.stringify({ success: false, error: 'No operation location received' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'No operation location received',
+          details: 'operation-location header missing from Azure response'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
@@ -113,16 +151,31 @@ serve(async (req) => {
       } else if (result.status === 'failed') {
         console.error('Analysis failed:', result.error);
         return new Response(
-          JSON.stringify({ success: false, error: 'Document analysis failed' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            success: false, 
+            error: 'Document analysis failed',
+            details: result.error || 'Azure analysis failed'
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
         );
       }
     }
 
     if (!result || result.status !== 'succeeded') {
+      console.error('Analysis timed out after', maxAttempts, 'attempts');
       return new Response(
-        JSON.stringify({ success: false, error: 'Analysis timed out' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'Analysis timed out',
+          details: `Polling timed out after ${maxAttempts} attempts`
+        }),
+        { 
+          status: 408,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
@@ -132,19 +185,37 @@ serve(async (req) => {
     // Extract focused data: Text, Tables, Checkboxes, and Figures
     const extractedData = extractFocusedElements(analyzeResult, modelType);
 
+    console.log('=== Returning successful response ===');
+    console.log('Extracted data keys:', Object.keys(extractedData));
+
     return new Response(
       JSON.stringify({
         success: true,
         data: extractedData
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
 
   } catch (error) {
-    console.error('Error in document analysis:', error);
+    console.error('=== Error in document analysis ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: false, 
+        error: 'Internal server error',
+        details: error.message,
+        type: error.constructor.name
+      }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
