@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -38,7 +37,10 @@ serve(async (req) => {
 
     // Clean and validate the endpoint URL and API key
     const cleanEndpoint = String(endpoint).trim().replace(/\/+$/, '');
-    const cleanApiKey = String(apiKey).trim().replace(/[^\x00-\x7F]/g, ''); // Remove non-ASCII characters
+    const cleanApiKey = String(apiKey).trim();
+    
+    console.log('Using endpoint:', cleanEndpoint);
+    console.log('API key length:', cleanApiKey.length);
     
     if (!cleanApiKey || cleanApiKey.length === 0) {
       console.error('Invalid API key format');
@@ -62,11 +64,14 @@ serve(async (req) => {
       }),
     });
 
+    console.log('Submit response status:', submitResponse.status);
+    console.log('Submit response headers:', Object.fromEntries(submitResponse.headers.entries()));
+
     if (!submitResponse.ok) {
       const errorText = await submitResponse.text();
       console.error('Submit failed:', submitResponse.status, errorText);
       return new Response(
-        JSON.stringify({ success: false, error: `Analysis submission failed: ${errorText}` }),
+        JSON.stringify({ success: false, error: `Analysis submission failed: ${submitResponse.status} - ${errorText}` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
