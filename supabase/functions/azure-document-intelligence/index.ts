@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -35,44 +36,24 @@ serve(async (req) => {
       );
     }
 
-    // Clean and validate the endpoint URL and API key
+    // Clean and validate the endpoint URL
     const cleanEndpoint = String(endpoint).trim().replace(/\/+$/, '');
-    // Ensure API key is properly encoded as ASCII for HTTP headers
     const cleanApiKey = String(apiKey).trim();
-    
-    // Validate that the API key contains only ASCII characters
-    const isValidAscii = /^[\x00-\x7F]*$/.test(cleanApiKey);
-    if (!isValidAscii) {
-      console.error('API key contains non-ASCII characters');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid API key format - contains non-ASCII characters' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
     
     console.log('Using endpoint:', cleanEndpoint);
     console.log('API key length:', cleanApiKey.length);
-    console.log('API key is valid ASCII:', isValidAscii);
-    
-    if (!cleanApiKey || cleanApiKey.length === 0) {
-      console.error('Invalid API key format');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid API key format' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
+    // Build the correct Azure Document Intelligence REST API URL
     const analyzeUrl = `${cleanEndpoint}/documentintelligence/documentModels/prebuilt-${modelType}:analyze?api-version=2024-11-30`;
     console.log('Submitting document to:', analyzeUrl);
 
-    // Create headers object explicitly to ensure proper encoding
-    const requestHeaders = new Headers();
-    requestHeaders.set('Ocp-Apim-Subscription-Key', cleanApiKey);
-    requestHeaders.set('Content-Type', 'application/json');
-
+    // Submit the document for analysis using the REST API format
     const submitResponse = await fetch(analyzeUrl, {
       method: 'POST',
-      headers: requestHeaders,
+      headers: {
+        'Ocp-Apim-Subscription-Key': cleanApiKey,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         base64Source: fileData
       }),
@@ -102,7 +83,7 @@ serve(async (req) => {
 
     console.log('Operation location:', operationLocation);
 
-    // Poll for results
+    // Poll for results using the operation location
     let result;
     let attempts = 0;
     const maxAttempts = 30;
@@ -113,12 +94,10 @@ serve(async (req) => {
 
       console.log(`Polling attempt ${attempts}/${maxAttempts}`);
 
-      // Create headers for polling request
-      const pollHeaders = new Headers();
-      pollHeaders.set('Ocp-Apim-Subscription-Key', cleanApiKey);
-
       const pollResponse = await fetch(operationLocation, {
-        headers: pollHeaders,
+        headers: {
+          'Ocp-Apim-Subscription-Key': cleanApiKey,
+        },
       });
 
       if (!pollResponse.ok) {
