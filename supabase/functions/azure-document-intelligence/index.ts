@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -36,14 +35,18 @@ serve(async (req) => {
       );
     }
 
-    // Submit document for analysis
-    const analyzeUrl = `${endpoint}/documentintelligence/documentModels/prebuilt-${modelType}:analyze?api-version=2024-11-30`;
+    // Clean the endpoint URL and ensure it doesn't have double slashes
+    const cleanEndpoint = endpoint.replace(/\/+$/, '');
+    const analyzeUrl = `${cleanEndpoint}/documentintelligence/documentModels/prebuilt-${modelType}:analyze?api-version=2024-11-30`;
     console.log('Submitting document to:', analyzeUrl);
 
+    // Ensure the API key is properly formatted as a string
+    const cleanApiKey = String(apiKey).trim();
+    
     const submitResponse = await fetch(analyzeUrl, {
       method: 'POST',
       headers: {
-        'Ocp-Apim-Subscription-Key': apiKey,
+        'Ocp-Apim-Subscription-Key': cleanApiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -85,7 +88,7 @@ serve(async (req) => {
 
       const pollResponse = await fetch(operationLocation, {
         headers: {
-          'Ocp-Apim-Subscription-Key': apiKey,
+          'Ocp-Apim-Subscription-Key': cleanApiKey,
         },
       });
 
