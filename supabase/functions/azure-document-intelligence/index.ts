@@ -37,10 +37,22 @@ serve(async (req) => {
 
     // Clean and validate the endpoint URL and API key
     const cleanEndpoint = String(endpoint).trim().replace(/\/+$/, '');
+    // Ensure API key is properly encoded as ASCII for HTTP headers
     const cleanApiKey = String(apiKey).trim();
+    
+    // Validate that the API key contains only ASCII characters
+    const isValidAscii = /^[\x00-\x7F]*$/.test(cleanApiKey);
+    if (!isValidAscii) {
+      console.error('API key contains non-ASCII characters');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid API key format - contains non-ASCII characters' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     console.log('Using endpoint:', cleanEndpoint);
     console.log('API key length:', cleanApiKey.length);
+    console.log('API key is valid ASCII:', isValidAscii);
     
     if (!cleanApiKey || cleanApiKey.length === 0) {
       console.error('Invalid API key format');
@@ -53,12 +65,14 @@ serve(async (req) => {
     const analyzeUrl = `${cleanEndpoint}/documentintelligence/documentModels/prebuilt-${modelType}:analyze?api-version=2024-11-30`;
     console.log('Submitting document to:', analyzeUrl);
 
+    // Create headers object explicitly to ensure proper encoding
+    const requestHeaders = new Headers();
+    requestHeaders.set('Ocp-Apim-Subscription-Key', cleanApiKey);
+    requestHeaders.set('Content-Type', 'application/json');
+
     const submitResponse = await fetch(analyzeUrl, {
       method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': cleanApiKey,
-        'Content-Type': 'application/json',
-      },
+      headers: requestHeaders,
       body: JSON.stringify({
         base64Source: fileData
       }),
@@ -99,10 +113,12 @@ serve(async (req) => {
 
       console.log(`Polling attempt ${attempts}/${maxAttempts}`);
 
+      // Create headers for polling request
+      const pollHeaders = new Headers();
+      pollHeaders.set('Ocp-Apim-Subscription-Key', cleanApiKey);
+
       const pollResponse = await fetch(operationLocation, {
-        headers: {
-          'Ocp-Apim-Subscription-Key': cleanApiKey,
-        },
+        headers: pollHeaders,
       });
 
       if (!pollResponse.ok) {
